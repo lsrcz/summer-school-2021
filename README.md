@@ -24,6 +24,7 @@ newgrp docker
 ```bash
 ​    docker container run -t -i jonhdotnet/summer_school:1.0 /bin/bash
     dafny test.dfy
+    exit
 ```
 
 If everything is working, you should see:
