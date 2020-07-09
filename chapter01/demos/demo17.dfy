@@ -1,10 +1,10 @@
 // Recursion
 
 // Let's define a function, and export properties of it with an ensures.
-function CountingNumbersSeq(x:int) : (s:seq<int>)
-  ensures forall i :: 0<=i<|s| ==> s[i] == i
+function Evens(x:int) : (s:seq<int>)
+  ensures forall i :: 0<=i<|s| ==> s[i] == 2 * i
 {
-  if x==0 then [] else CountingNumbersSeq(x - 1) + [x-1]
+  if x==0 then [] else Evens(x) + [2 * (x-1)]
 }
 
 // Walk through this sequence
@@ -31,3 +31,5 @@ expression context.
 
 Turns out you can insert assertions before the expression in a function.
 Let's use a var (let) expression to put s in scope.
+
+Punchline: it doesn't know |s|==x

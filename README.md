@@ -50,7 +50,7 @@ mkdir work
 cd work
 docker container run -t -i --mount src="`pwd`",target=/home/dafnyserver/work,type=bind --workdir /home/dafnyserver/work jonhdotnet/summer_school:1.0 /bin/bash
 git clone https://github.com/GLaDOS-Michigan/summer-school-2020.git
-cd summer_school/chapter01
+cd summer-school-2020/chapter01
 ```
 
 Now you can edit files using your preferred native OS editor under the work/
