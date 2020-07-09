@@ -40,7 +40,7 @@ Execution trace:
 Dafny program verifier finished with 0 verified, 1 error
 ```
 
-# Use the image
+# Run the image
 
 Run the image connected to your filesystem so you can edit in your OS, and then run Dafny from inside the docker container:
 
@@ -51,3 +51,22 @@ docker container run -t -i --mount src="`pwd`",target=/home/dafnyserver/work,typ
 git clone https://github.com/GLaDOS-Michigan/summer-school-2020.git
 cd summer_school/chapter01
 ```
+
+Now you can edit files using your preferred native OS editor under the work/
+directory, and verify them with Dafny from the terminal that's running the
+docker image.
+
+# Working the exercises
+
+The `chapter` directories contain:
+
+* `exercise/*.dfy`: work through these files in order. Instructions appear
+  in comments in the file.
+
+* `demo/`: The lecturer will use these files to present new ideas. Feel free to browse them.
+
+* `hint/`: If you get stuck on an exercise, peek into the corresponding hint file. Avoid looking in here if you want to avoid spoilers!
+
+* `solution/': If you get really stuck, look for solutions here. Again, spoiler warning.
+
+Files in a directory are numbered to indicate the order they're meant to be read.  There is no chapter01/exercise17.dfy because there is a chapter01/demo17.
