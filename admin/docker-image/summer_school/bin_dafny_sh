@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+# Verify a dafny file (but skip generating an executable).
+#
+# We'll use this script most of the time because we're mostly ignoring
+# Dafny's imperative features.
+
+/home/dafnyserver/.dafny/dafny/Binaries/dafny /compile:0 $*

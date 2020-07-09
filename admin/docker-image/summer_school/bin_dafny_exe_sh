@@ -1,0 +1,5 @@
+#!/bin/bash
+#
+# Build a dafny file into an executable that you can run with mono.
+
+/home/dafnyserver/.dafny/dafny/Binaries/dafny $*

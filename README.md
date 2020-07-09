@@ -49,5 +49,5 @@ mkdir work
 cd work
 docker container run -t -i --mount src="`pwd`",target=/home/dafnyserver/work,type=bind --workdir /home/dafnyserver/work jonhdotnet/summer_school:1.0 /bin/bash
 git clone https://github.com/GLaDOS-Michigan/summer-school-2020.git
-cd tutorial/chapter01
+cd summer_school/chapter01
 ```
