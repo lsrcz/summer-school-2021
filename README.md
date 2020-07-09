@@ -1,8 +1,8 @@
 # Install Docker itself if you don't have it already.
 
-  * Mac installer
+  * [Mac installer](https://docs.docker.com/v17.12/docker-for-mac/install/)
 
-  * Windows installer
+  * [Windows installer](https://docs.docker.com/v17.12/docker-for-windows/install/)
 
   * On linux:
 
