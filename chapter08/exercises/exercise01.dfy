@@ -1,11 +1,12 @@
-// You will build a Sharded Hash Table (SHT).
+// You will design a Sharded Hash Table (SHT) protocol and prove its correctness.
 //
 // The SHT should consist of a number of nodes storing key-value pairs.
 // There are no external clients; the nodes perform Get()'s and Put()'s on the keys directly.
 // A node can only perform a Get or Put on a key it owns.
 // Each key is owned by exactly one node.
 // A node can transfer ownership of a set of keys (a.k.a. shard) to another node by sending it a TransferMessage that is delivered asynchronously (i.e. as part of a different state transition)
-// 
+// All actions should be defined at the protocol level (i.e. as predicates) and not as imperative methods.
+//
 // The entire application should behave like a logically centralized hash table.
 
 module Base {
