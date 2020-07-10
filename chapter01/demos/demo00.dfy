@@ -1,31 +1,38 @@
 // What does it mean to "prove" something? It means
 // we define some concepts, and then write down a
 // relation between them.
+datatype Node = Node
+datatype Graph = Graph
+datatype Path = Path
+function NodesWithOddDegree(g:Graph) : set<Node>
+predicate EulerWalk(g:Graph, p:Path)
+
 lemma EulersGraph(g:Graph)
   requires |NodesWithOddDegree(g)| > 2
   ensures !exists p :: EulerWalk(g, p)
 {
-  // do I want a body here? Maybe!
+  assume false;
 }
 
 // Let's talk about code, not "just math".
 // Verifier is "considering all the corner cases" -- it's not
-// *trying* all 2^64; it's not a model checker! It has a model
+// *trying* all 2^32; it's not a model checker! It has a model
 // of the datatypes, and it reasons abstractly whether our
 // claim is *always* true.
 // Let's use this power to catch *all* the implementation bugs
 // in your code: from low-level bugs like this one to high-level
 // semantic bugs.
-method Increment(a:uint64) returns (b:uint64)
+newtype uint32 = a:int | a < 0x1_0000_0000
+method IncrementU32(a:uint32) returns (b:uint32)
   ensures b > a
 {
-  b := a + 1
+  b := a + 1;
 }
 
-method Increment(a:int) returns (b:int)
+method IncrementInt(a:int) returns (b:int)
   ensures b > a
 {
-  b := a + 1
+  b := a + 1;
 }
 
 
