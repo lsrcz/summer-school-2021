@@ -38,5 +38,24 @@ module LockServer {
   predicate Next(k:Constants, s:Variables, s':Variables) {
     exists step :: NextStep(k, s, s', step)
   }
+
+  predicate Safety(s:Variables) {
+    // What's a good definition of safety for the lock server? No two clients
+    // have the lock simultaneously. Write that here.
+    false
+  }
+
+  predicate Inv(s:Variables) {
+    true  // probably not strong enough. :v)
+  }
+
+  // Here's your obligation. Probably easiest to break this up into three
+  // lemmas, each P==>Q becomes requires P ensures Q.
+  lemma SafetyTheorem(k:Constants, s:Variables, s':Variables)
+    ensures Init(k, s) ==> Inv(s)
+    ensures Inv(s) && Next(k, s, s') ==> Inv(s')
+    ensures Inv(s) ==> Safety(s)
+  {
+  }
 }
 

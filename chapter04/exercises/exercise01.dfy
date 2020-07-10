@@ -19,7 +19,7 @@ module Crawler {
 
   predicate Next(s:Variables, s':Variables) {
     || MoveNorth(s, s')
-    || MoveSouthEast s')
+    || MoveSouthEast(s, s')
   }
 
   predicate InManhole(s:Variables) {
@@ -28,5 +28,18 @@ module Crawler {
 
   predicate Safety(s:Variables) {
     !InManhole(s)
+  }
+
+  predicate Inv(s:Variables) {
+    true  // probably not strong enough. :v)
+  }
+
+  // Here's your obligation. Probably easiest to break this up into three
+  // lemmas, each P==>Q becomes requires P ensures Q.
+  lemma SafetyTheorem(s:Variables, s':Variables)
+    ensures Init(s) ==> Inv(s)
+    ensures Inv(s) && Next(s, s') ==> Inv(s')
+    ensures Inv(s) ==> Safety(s)
+  {
   }
 }
