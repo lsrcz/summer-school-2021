@@ -24,6 +24,7 @@ lemma TheseTwoPredicatesAreEquivalent(x:int, y:int)
 
 // Add a precondition to make this lemma verify.
 lemma FourTimesIsPrettyBig(x:int)
+  requires x>=0
 {
   assert AtLeastTwiceAsBigPredicate(Double(Double(x)), x);
 }
