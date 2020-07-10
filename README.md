@@ -57,6 +57,11 @@ Now you can edit files using your preferred native OS editor under the work/
 directory, and verify them with Dafny from the terminal that's running the
 docker image.
 
+# STOP HERE!
+
+If you're preparing for the summer camp, stop here! The first set of exercises
+begins after the first lecture session.
+
 # Working the exercises
 
 The `chapter` directories contain:
