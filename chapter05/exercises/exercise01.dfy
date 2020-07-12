@@ -12,4 +12,4 @@
 //will become the new holder and will set its epoch number to the message’s
 //epoch number.  
 
-include "framework.s.dfy"
+include "../framework.s.dfy"
