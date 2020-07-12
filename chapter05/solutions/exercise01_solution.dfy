@@ -63,8 +63,6 @@ module DistributedLock refines DistributedSystem {
 
 //////////////////////////////////////////////////////////////////////////////
 // Proof
-// TODO separate the statement of the proof in a .s-ish way, per
-// sharded-hash-table.dfy
 
 module Proof {
   import opened DistributedLock
