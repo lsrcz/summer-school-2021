@@ -6,10 +6,12 @@ predicate divides(f:nat, i:nat)
 
 predicate IsPrime(i:nat)
 {
-  forall f :: 1 < f < i ==> !divides(f, i)
+  && 1<i
+  && ( forall f :: 1 < f < i ==> !divides(f, i) )
 }
 
 method test_prime(i:nat) returns (result:bool)
+  requires 1<i
   ensures result == IsPrime(i)
 {
   // Fill in the body.

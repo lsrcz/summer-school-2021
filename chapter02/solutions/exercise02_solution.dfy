@@ -6,12 +6,14 @@ predicate divides(f:nat, i:nat)
 
 predicate IsPrime(i:nat)
 {
-  forall f :: 1 < f < i ==> !divides(f, i)
+  && 1<i
+  && ( forall f :: 1 < f < i ==> !divides(f, i) )
 }
 
 // Convincing the proof to go through requires adding
 // a loop invariant and a triggering assert.
 method test_prime(i:nat) returns (result:bool)
+  requires 1<i
   ensures result == IsPrime(i)
 {
   var f := 2;
