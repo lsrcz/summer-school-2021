@@ -1,3 +1,5 @@
+// The game of Nim
+
 datatype State = State(tokens:int)
 
 predicate Init(s:State) {
