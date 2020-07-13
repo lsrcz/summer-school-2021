@@ -9,7 +9,7 @@ lemma Forall()
   assert forall x:int :: x+x == 2*x;
 }
 
-// Remember this critter from example10? We can rewrite it in a forall.
+// Remember this critter from exercise10? We can rewrite it in a forall.
 lemma AnotherForall()
 {
   // "Two wrongs don't make a right, but ..."
