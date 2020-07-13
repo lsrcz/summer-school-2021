@@ -1,0 +1,64 @@
+module Environment {
+  function NumHosts() : nat
+    ensures NumHosts() > 0
+
+  newtype HostId = b: int | 0 <= b < NumHosts()
+  function AllHosts() : set<HostId> {
+    set h:HostId | true
+  }
+  datatype Option<V> = None | Some(value:V)
+  datatype NetAction<M> = NetAction(rcv:Option<M>, send:set<M>)
+}
+
+module Network {
+  import opened Environment
+
+  datatype Constants = Constants()
+  datatype Variables<M> = Variables(messageSet:set<M>)
+
+  predicate Init(constants:Constants, state:Variables) {
+    state.messageSet == {}
+  }
+
+  predicate Next(constants:Constants, state:Variables, state':Variables, a:NetAction) {
+    && (a.rcv.Some? ==> a.rcv.value in state.messageSet)
+    && state'.messageSet == state.messageSet + a.send - if a.rcv.Some? then {a.rcv.value} else {}
+  }
+}
+
+abstract module DistributedSystem {
+  import opened Environment
+  import Network
+
+  // parameters filled in by refining module
+  type M(!new,==)
+  type HConstants
+  type HVariables
+  type HStep(!new,==)
+  predicate HInit(constants:HConstants, state:HVariables, id:HostId)
+  predicate HNextStep(constants:HConstants, state:HVariables, state':HVariables, a:NetAction<M>, step:HStep)
+
+  type HostMap<V> = m:map<HostId, V> | m.Keys == AllHosts()
+    ghost witness var v:V :| true; map h:HostId | h in AllHosts() :: v
+  type HostConstantsMap = HostMap<HConstants>
+  type HostVariablesMap = HostMap<HVariables>
+  datatype Constants
+    = Constants(hosts:HostConstantsMap, network:Network.Constants)
+  datatype Variables
+    = Variables(hosts:HostVariablesMap, network:Network.Variables<M>)
+
+  predicate Init(constants:Constants, state:Variables) {
+    && (forall id :: HInit(constants.hosts[id], state.hosts[id], id))
+    && Network.Init(constants.network, state.network)
+  }
+
+  predicate NextStep(constants:Constants, state:Variables, state':Variables, id:HostId, a:NetAction<M>, step:HStep) {
+    && HNextStep(constants.hosts[id], state.hosts[id], state'.hosts[id], a, step)
+    && (forall other :: other != id ==> state'.hosts[other] == state.hosts[other])
+    && Network.Next(constants.network, state.network, state'.network, a)
+  }
+
+  predicate Next(constants:Constants, state:Variables, state':Variables) {
+    exists id, a, step :: NextStep(constants, state, state', id, a, step)
+  }
+}
