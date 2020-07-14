@@ -4,6 +4,11 @@
 // the lock (if the lock is currently held by the server) or it can return the
 // lock (if it currently holds it). 
 //
+// Don't just have a single variable that says who holds the lock.
+// Model the server as one piece of state, and each client as a separate piece
+// of state. Representing the node states separately models the idea that each
+// node has its own view of the world.
+//
 // Do not model the network. Instead, model the beliefs of the server and each
 // of the clients, and allow steps that update a pair of (server, some client)
 // simultaneously (skipping the network asynchrony).
