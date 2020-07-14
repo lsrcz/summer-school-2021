@@ -22,9 +22,14 @@ predicate Inv(s: Library) {
   Safety(s)
 }
 
-lemma SafetyProof()
-  ensures forall s :: Init(s) ==> Inv(s)
-  ensures forall s, s' :: Inv(s) && Next(s, s') ==> Inv(s')
-  ensures forall s :: Inv(s) ==> Safety(s)
-{
-}
+// This is the boilerplate proof obligation you might like. For this exercise,
+// focus on modeling the system described above with a state machine and
+// *stating* a safety property; don't try to prove the safety property yet.
+// We'll prove it in chapter04/exercise02.
+//
+// lemma SafetyProof()
+//   ensures forall s :: Init(s) ==> Inv(s)
+//   ensures forall s, s' :: Inv(s) && Next(s, s') ==> Inv(s')
+//   ensures forall s :: Inv(s) ==> Safety(s)
+// {
+// }
