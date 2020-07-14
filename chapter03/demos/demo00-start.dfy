@@ -70,24 +70,28 @@ lemma InductiveStep(s: Library, s': Library)
   forall name ensures HasAtMostOneBook(s', name) {
     assert HasAtMostOneBook(s, name);
     if book, patron :| CheckOut(s, s', book, patron) {
-      assert forall book, name | name != patron
-        :: CheckedOutTo(s, book, name) == CheckedOutTo(s', book, name);
-// Here's another equivalent proof of the CheckOut case that I
-// developed another time I tried this:
-//    if !CheckedOutTo(s, book1, name) {
-//      assert book1 == book;
-//    }
-//    if !CheckedOutTo(s, book2, name) {
-//      assert book2 == book;
-//    }
+//      if patron == name {
+//        assert HasAtMostOneBook(s', name);
+//      } else {
+        assert forall book, name | name != patron
+          :: CheckedOutTo(s, book, name) == CheckedOutTo(s', book, name);
+//        assert HasAtMostOneBook(s', name);
+//      }
     } else {
       var book, patron :| CheckIn(s, s', book, patron);
-      forall book1, book2 |
-        CheckedOutTo(s', book1, name) && CheckedOutTo(s', book2, name)
-        ensures book1 == book2 {
-        assert CheckedOutTo(s, book1, name);
-        assert CheckedOutTo(s, book2, name);
-      }
+//      if patron == name {
+        forall book1, book2 |
+          CheckedOutTo(s', book1, name) && CheckedOutTo(s', book2, name)
+          ensures book1 == book2 {
+          assert CheckedOutTo(s, book1, name);
+          assert CheckedOutTo(s, book2, name);
+        }
+//        assert HasAtMostOneBook(s', name);
+//      } else {
+//        assert forall book, name | name != patron
+//          :: CheckedOutTo(s, book, name) == CheckedOutTo(s', book, name);
+//        assert HasAtMostOneBook(s', name);
+//      }
     }
   }
 }
