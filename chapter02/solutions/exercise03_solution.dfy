@@ -6,7 +6,7 @@ predicate IsSorted(s:seq<int>)
 predicate SortSpec(input:seq<int>, output:seq<int>)
 {
   && IsSorted(output)
-  && multiset(input) == multiset(output)
+  && multiset(output) == multiset(input)
 }
 
 //lemma SequenceConcat(s:seq<int>, pivot:int)
@@ -25,13 +25,9 @@ method merge_sort(input:seq<int>) returns (output:seq<int>)
     var left := input[..pivotIndex];
     var right := input[pivotIndex..];
     var leftSorted := left;
-    if left!=[] {
-      leftSorted := merge_sort(left);
-    }
+    leftSorted := merge_sort(left);
     var rightSorted := right;
-    if right!=[] {
-      rightSorted := merge_sort(right);
-    }
+    rightSorted := merge_sort(right);
     output := merge(leftSorted, rightSorted);
     assert left + right == input; // derived via calc
 //    calc {
