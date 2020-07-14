@@ -26,6 +26,7 @@ module Crawler {
     s.x*s.x + s.y*s.y <= 3*3
   }
 
+  // ...but the invariant doesn't need to be this strong!
   predicate ReachabilityProperty(s:Variables) {
     s.x >= 0 && s.y >= 5-s.x
   }
