@@ -15,7 +15,7 @@ predicate Acquire(s: State, s':State, id:int) {
   && s'.server == Client(id)
   && |s'.clients| == |s.clients|  // Don't lose track of any clients.
   && ( forall i | 0 <= i < |s.clients| ::
-      s'.clients[i] == if i == id then Acquired else Released )
+      s'.clients[i] == if i == id then Acquired else s.clients[i] )
 }
 
 predicate Release(s: State, s':State, id:int) {
@@ -23,7 +23,8 @@ predicate Release(s: State, s':State, id:int) {
   && s.clients[id].Acquired?
   && s'.server.Unlocked?
   && |s'.clients| == |s.clients|  // Don't lose track of any clients.
-  && ( forall i | 0 <= i < |s.clients| :: s'.clients[i].Released? )
+  && ( forall i | 0 <= i < |s.clients| ::
+      s'.clients[i] == if i == id then Released else s.clients[i] )
 }
 
 predicate Next(s: State, s':State, id:int) {
