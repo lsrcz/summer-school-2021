@@ -1,0 +1,7 @@
+Network can redeliver old messages!
+Hosts and messages should have an epoch number so they can tell when messages
+have already been consumed.
+
+
+There's no distinguished server host.  Initialization should cause one client
+(say, #0) to hold the lock, and nobody else.

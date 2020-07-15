@@ -1,0 +1,19 @@
+Define an InFlight predicate for messages that uses epoch numbers in
+messages and at clients.
+
+Invariant conjuncts:
+  - toss in WFState, because it'll let other predicates dereference s.hosts[i]
+    without hassle
+
+  - Safety
+
+  - If there's a message in flight, it's the only one. (equivalently,
+    if there are two messages in flight, they're equal.)
+
+  - A message in flight means no client thinks it holds the lock,
+    and conversely.
+
+  - If a message is in flight, its epoch number exceeds that of all clients
+
+  - If a client holds the lock, its epoch number exceeds that of all other
+  clients.

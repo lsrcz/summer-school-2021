@@ -1,0 +1,9 @@
+Grant enabling condition: I hold the lock.
+Grant network activity: receive nothing; send a message.
+Grant state updates: I no longer hold the lock.
+  (and keep other state unchanged!)
+
+Accept enabling condition: I've never seen this message before
+Accept network activity: receive a message; send nothing
+Accept state updates: Bump epoch number to mark message seen;
+  I now hold the lock.

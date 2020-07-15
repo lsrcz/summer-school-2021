@@ -1,0 +1,5 @@
+Some reasonable starting points for the Message type and HostState:
+
+datatype Message = Grant(dest:HostId, epoch:nat)
+
+datatype HostState = HostState(holdsLock:bool, epoch:nat)
