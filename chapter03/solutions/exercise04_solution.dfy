@@ -27,7 +27,7 @@ predicate Release(s: State, s':State, id:int) {
       s'.clients[i] == if i == id then Released else s.clients[i] )
 }
 
-predicate Next(s: State, s':State, id:int) {
+predicate Next(s: State, s':State) {
   || ( exists id :: Acquire(s, s', id) )
   || ( exists id :: Release(s, s', id) )
 }
