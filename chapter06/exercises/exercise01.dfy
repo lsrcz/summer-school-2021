@@ -10,6 +10,29 @@
 //node by sending them a “Grant” message which has an epoch number that is
 //greater than the node’s epoch number. A node that receives such a message
 //will become the new holder and will set its epoch number to the message’s
-//epoch number.  
+//epoch number.
 
-include "../framework.s.dfy"
+// You'll first need to modify 'protocol.i.dfy' to define the protocol message
+// format and the host behavior.
+// Then come back here define the safety condition and prove that the
+// distributed system made from that protocol maintains it.
+
+include "distributed_system.s.dfy"
+
+// Replace 'false' with an appropriate safety condition: no two clients hold
+// the lock simulatneously.
+predicate Safety(s:DistState) {
+  false
+}
+
+// Replace 'true' with an invariant that's induction and supports Safety.
+predicate Inv(s:DistState) {
+  true
+}
+
+lemma SafetyProof()
+  ensures forall s :: DistInit(s) ==> Inv(s)
+  ensures forall s, s' :: Inv(s) && DistNext(s, s') ==> Inv(s')
+  ensures forall s :: Inv(s) ==> Safety(s)
+{
+}
