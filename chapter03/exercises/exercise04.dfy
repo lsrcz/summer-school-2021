@@ -19,11 +19,21 @@
 
 // Here's a helpful boilerplate for the inductive proof structure.
 
-predicate Safety(s:Library) {
+datatype State = State(/* You define this ...*/)
+
+predicate Init(s:State) {
+  true  // Replace me
+}
+
+predicate Next(s:State, s':State) {
+  true  // Replace me
+}
+
+predicate Safety(s:State) {
   true  // Change me to the important property!
 }
 
-predicate Inv(s: Library) {
+predicate Inv(s: State) {
   Safety(s)
 }
 
