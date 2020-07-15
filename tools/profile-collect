@@ -1,0 +1,7 @@
+#!/bin/bash
+if [[ X`echo $* | grep /proc`X == XX ]]
+then echo "Don't forget the /proc argument!"; exit -1
+fi
+# "qi" stands for "quantifier instatiation" count.
+dafny /z3opt:smt.qi.profile=true /z3opt:smt.qi.profile_freq=1000 $* > dafny-qi.profile
+
