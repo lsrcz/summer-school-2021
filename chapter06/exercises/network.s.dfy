@@ -1,4 +1,28 @@
 //////////////////////////////////////////////////////////////////////////////
+// Some handy global definitions
+//////////////////////////////////////////////////////////////////////////////
+
+// A global constant telling us how many hosts are participating.  It's a
+//
+
+// A global constant telling us how many hosts are participating.  It's a
+// constant so we don't have to prove it doesn't change as the execution
+// evolves.
+function NumHosts() : nat
+  ensures NumHosts() > 0
+
+// "newtype" means that HostId is just an int ... except that it always
+// satisfies 0 <= b < NumHosts().
+// ("nat" is "newtype nat = b: int | 0 <= b".)
+newtype HostId = b: int | 0 <= b < NumHosts()
+
+// The set of all host identities.
+function AllHosts() : set<HostId> {
+  set h:HostId | true     // ignore the "No terms found" warning.
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
 // Network
 //////////////////////////////////////////////////////////////////////////////
 
