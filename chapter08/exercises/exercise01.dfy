@@ -9,6 +9,20 @@
 //
 // The entire application should behave like a logically centralized hash table.
 
+// You should assume that the network delivers packets at-most-once so you don't
+// have to deal with the duplicate-defeating epoch number mechanism from
+// the midterm (chapter06) exercise. hints/hint00 provides the necessary
+// changes to network.s.dfy file, if you are uncomfortable trying to make that
+// change yourself.
+
+// Here are some handy library functions that you may find useful for
+// manipulating maps.
+//
+// You may recall that, in some lecture examples, we
+// refined a hash table to a map, and then a sharded hash table to a map.
+// Your protocol doesn't NOT need to build a linear-probing hash table --
+// the local state on each Host may be a Dafny map<>.
+
 module Base {
   function ZeroMap() : imap<int,int>
   {

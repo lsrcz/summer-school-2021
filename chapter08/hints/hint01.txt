@@ -1,3 +1,10 @@
 When designing your Sharded Hash Table, you will need to define a separate module for each of the Environment, Network and Distributed System. You can draw "inspiration" from previous exercises as to how those should look like.
 
-If you are still struggling, hint02 contains the full description for these three modules.
+You need an application specification, an interpretation function I() from
+the distributed system state, and a lemma showing that
+DistributedSystem.Next(s, s') implies Application.Next(I(s), I(s')).
+
+If you are still struggling, hint02 contains the full description for the
+DistributedSystem modules.
+
+hint03 gives away the complete Application Specification state machine.

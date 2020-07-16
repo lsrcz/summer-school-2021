@@ -1,0 +1,10 @@
+Here is a network Next predicate that assumes the network layer never
+duplicates messages.
+
+  predicate Next(constants:Constants, state:Variables, state':Variables, a:NetAction) {
+    && (a.rcv.Some? ==> a.rcv.value in state.messageSet)
+    && state'.messageSet == state.messageSet
+      - if a.rcv.Some? then {a.rcv.value} else {} // Don't duplicate messages.
+      + a.send
+  }
+

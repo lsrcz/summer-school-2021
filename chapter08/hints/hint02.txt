@@ -1,3 +1,8 @@
+// Here is the framework for the distributed system. It uses Dafny
+// modules (including an abstract module for the DistributedSystem),
+// but you can rearrange the same concepts to not use modules if you
+// prefer.
+
 module Environment {
   function NumHosts() : nat
     ensures NumHosts() > 0
@@ -22,7 +27,9 @@ module Network {
 
   predicate Next(constants:Constants, state:Variables, state':Variables, a:NetAction) {
     && (a.rcv.Some? ==> a.rcv.value in state.messageSet)
-    && state'.messageSet == state.messageSet + a.send - if a.rcv.Some? then {a.rcv.value} else {}
+    && state'.messageSet == state.messageSet
+        - if a.rcv.Some? then {a.rcv.value} else {}
+        + a.send
   }
 }
 

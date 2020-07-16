@@ -1,0 +1,44 @@
+module HashTable {
+  import opened Base
+
+  predicate {:opaque} IsFull(m:imap<int, int>) {
+    forall i :: i in m
+  }
+  function FullMapWitness() : (m:imap<int,int>)
+    ensures IsFull(m)
+  {
+    reveal_IsFull();
+    imap key:int | true :: 0
+  }
+  type FullMap = m: imap<int, int> | IsFull(m)
+    ghost witness FullMapWitness()
+
+  datatype Constants = Constants()
+  datatype Variables = Variables(table:FullMap)
+  
+  predicate Init(constants:Constants, state:Variables) {
+    state.table == ZeroMap()
+  }
+
+  predicate Get(constants:Constants, state:Variables, state':Variables, key:int, value:int) {
+    && state.table[key] == value
+    && state' == state
+  }
+
+  predicate Put(constants:Constants, state:Variables, state':Variables, key:int, value:int) {
+    && state'.table == state.table[key := value]
+  }
+
+  datatype Step = GetStep(key:int, value:int) | PutStep(key:int, value:int)
+
+  predicate NextStep(constants:Constants, state:Variables, state':Variables, step:Step) {
+    match step {
+      case GetStep(key, value) => Get(constants, state, state', key, value)
+      case PutStep(key, value) => Put(constants, state, state', key, value)
+    }
+  }
+
+  predicate Next(constants:Constants, state:Variables, state':Variables) {
+    exists step :: NextStep(constants, state, state', step)
+  }
+}
