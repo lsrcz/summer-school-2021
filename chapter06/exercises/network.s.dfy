@@ -39,15 +39,16 @@ datatype Option<V> = None | Some(value:V)
 // the host had better agree it wanted to send those packets.
 datatype NetAction<M> = NetAction(rcv:Option<M>, send:set<M>)
 
-datatype NetState<M> = NetState(messageSet:set<M>)
+// Once a host has sent a message, messagesEverSent
+datatype NetState<M> = NetState(messagesEverSent:set<M>)
 
 predicate NetInit(s:NetState) {
-  s.messageSet == {}
+  s.messagesEverSent == {}
 }
 
 predicate NetNext(s:NetState, s':NetState, a:NetAction) {
-  && (a.rcv.Some? ==> a.rcv.value in s.messageSet)
-  && s'.messageSet == s.messageSet + a.send
+  && (a.rcv.Some? ==> a.rcv.value in s.messagesEverSent)
+  && s'.messagesEverSent == s.messagesEverSent + a.send
   // A fancier network might constrain hosts to only send messages with correct
   // source addresses. In this exercise, you define the message structure, so
   // we're not going to enforce anything here.
