@@ -115,7 +115,7 @@ module Network {
   predicate Next(constants:Constants, state:Variables, state':Variables, a:NetAction) {
     && (a.rcv.Some? ==> a.rcv.value in state.messageSet)
     && state'.messageSet == state.messageSet
-      - if a.rcv.Some? then {a.rcv.value} else {}
+      - ( if a.rcv.Some? then {a.rcv.value} else {} )
       + a.send
   }
 }
