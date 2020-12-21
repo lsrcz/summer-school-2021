@@ -12,6 +12,8 @@ predicate IsSortedTree(t:Tree) {
     else
         && (forall j | 0 <= j < |I(t.left)| :: I(t.left)[j] <= t.value)
         && (forall j | 0 <= j < |I(t.right)| :: t.value <= I(t.right)[j])
+        && IsSortedTree(t.left)
+        && IsSortedTree(t.right)
 }
 
 method CheckIfSortedTree(t:Tree) returns (sorted:bool)
@@ -24,7 +26,6 @@ method CheckIfSortedTree(t:Tree) returns (sorted:bool)
         var rightSorted := CheckIfSortedTree(t.right);
         if (!leftSorted || !rightSorted) {
             assert !IsSortedTree(t);
-            // TBD
             return false;
         } else {
             var leftSeq := I(t.left);
@@ -36,21 +37,8 @@ method CheckIfSortedTree(t:Tree) returns (sorted:bool)
             } else if (!isValueBeforeRight) {
                 return false;
             } else {
-                forall j | 0 <= j < |I(t.left)| 
-                    ensures I(t.left)[j] <= t.value
-                {
-                    if (|leftSeq| == 0) {
-                        assert I(t.left)[j] <= t.value;
-                    } else {
-                        assert IsSortedTree(t.left);
-                        assert !t.left.Nil?;
-                        ISorted(t.left);
-                        assert (forall j | 0 <= j < |I(t.left)| :: I(t.left)[j] <= t.value);
-                        assert I(t.left)[j] <= t.value;
-                    }
-                }
+                ISorted(t.left);
                 ISorted(t.right);
-                assert (forall j | 0 <= j < |I(t.right)| :: t.value <= I(t.right)[j]);
                 return true;
             }
         }    
@@ -61,6 +49,5 @@ lemma ISorted(t:Tree)
     requires IsSortedTree(t) 
     ensures forall j,k | 0 <= j <= k < |I(t)| :: I(t)[j] <= I(t)[k]
 {
-    // TBD
 }
 
