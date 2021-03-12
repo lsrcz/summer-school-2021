@@ -5,67 +5,77 @@
 //#instructor It comes with a safety proof that we expect the students to use as an 
 //#instructor oracle for whether they got the state transitions right.
 
+// You are asked to define the state machine for a coke vending machine.
+// The machine starts empty and has a maximum capacity of 7 cokes. 
+// The machine should support the following actions:
+// Purchase: dispense one coke from the machine
+// Restock: add one coke to the machine
+
+datatype Constants = Constants(capacity:int)
 datatype CokeMachine = CokeMachine(numCokes:int)
 
-function maxCokes() : int {
-   7
-} 
-
-predicate Init(cm:CokeMachine) {
-    cm.numCokes == 0
+predicate Init(c:Constants, cm:CokeMachine) {
+//#elide    && c.capacity == 7
+//#elide    && cm.numCokes == 0
 }
 
-predicate Purchase(cm:CokeMachine, cm':CokeMachine) {
+predicate Purchase(c:Constants, cm:CokeMachine, cm':CokeMachine) {
 //#elide    && cm.numCokes > 0
 //#elide    && cm'.numCokes == cm.numCokes - 1
 }
 
-predicate Restock(cm:CokeMachine, cm':CokeMachine, numRestock:int) 
+predicate Restock(c:Constants, cm:CokeMachine, cm':CokeMachine, numRestock:int) 
 {
 //#elide    && numRestock >= 0
 //#elide    && cm.numCokes + numRestock <= maxCokes()
 //#elide    && cm'.numCokes == cm.numCokes + numRestock
 }
 
-predicate Next(cm:CokeMachine, cm':CokeMachine) {
-    || Purchase(cm, cm')
-    || (exists n :: Restock(cm, cm', n))
+predicate Next(c:Constants, cm:CokeMachine, cm':CokeMachine) {
+    || Purchase(c, cm, cm')
+    || (exists n :: Restock(c, cm, cm', n))
 } 
 
 //==========================
-predicate Inv(cm:CokeMachine) {
-    0 <= cm.numCokes <= maxCokes()
+// Everything below this line is not part of the specification. It allows
+// you to use the verifier to confirm that your state machine has a number
+// of desirable properties.
+
+predicate Inv(c:Constants, cm:CokeMachine) {
+    0 <= cm.numCokes <= c.capacity
 }
 
 lemma SafetyProof() 
-    ensures forall cm | Init(cm) :: Inv(cm)
-    ensures forall cm, cm' | Inv(cm) && Next(cm, cm') :: Inv(cm')
+    ensures forall c, cm | Init(c, cm) :: Inv(c, cm)
+    ensures forall c, cm, cm' | Inv(c, cm) && Next(c, cm, cm') :: Inv(c, cm')
 {
-    forall cm, cm' | Inv(cm) && Next(cm, cm') 
-        ensures Inv(cm')
+    forall cm, cm' | Inv(c, cm) && Next(c, cm, cm') 
+        ensures Inv(c, cm')
     {
-        if(Purchase(cm, cm')) {
-            assert Inv(cm');
+        if(Purchase(c, cm, cm')) {
+            assert Inv(c, cm');
         } else {
-            var n :| Restock(cm, cm', n);
-            assert Inv(cm');
+            var n :| Restock(c, cm, cm', n);
+            assert Inv(c, cm');
         }   
     }
 }
 
 lemma NonTrivialPurchase()
-    ensures exists cm, cm' :: Inv(cm) && Next(cm, cm') && cm'.numCokes + 1 == cm.numCokes
+    ensures exists c, cm, cm' :: Inv(c, cm) && Next(c, cm, cm') && cm'.numCokes + 1 == cm.numCokes
 {
+    var c := Constants(7);
     var cm := CokeMachine(1);   
     var cm' := CokeMachine(0);   
-    assert Inv(cm) && Next(cm, cm') && cm'.numCokes + 1 == cm.numCokes;
+    assert Inv(c, cm) && Next(cm, cm') && cm'.numCokes + 1 == cm.numCokes;
 }
 
 lemma NonTrivialRestock()
     ensures exists cm, cm' :: Inv(cm) && Next(cm, cm') && cm.numCokes < cm'.numCokes
 {
+    var c := Constants(7);
     var cm := CokeMachine(4);   
     var cm' := CokeMachine(7);   
-    assert Restock(cm, cm', 3);
-    assert Inv(cm) && Next(cm, cm') && cm.numCokes < cm'.numCokes;
+    assert Restock(c, cm, cm', 3);
+    assert Inv(c, cm) && Next(c, cm, cm') && cm.numCokes < cm'.numCokes;
 }
