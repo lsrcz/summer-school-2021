@@ -1,4 +1,6 @@
-// The game of Nim
+//#instructor The game of Nim. A more advanced state machine than Switch,
+//#instructor which also introduces step parameters and the corresponding
+//#instructor existentials in the Next() predicate.
 
 datatype State = State(tokens:int)
 

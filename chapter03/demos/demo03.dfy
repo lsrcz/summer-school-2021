@@ -1,3 +1,5 @@
+//#instructor This example demonstrates the need and use of Jay Normal Form (JNF)
+
 datatype Burger = Single | Double
 
 datatype State = State(patties:nat, buns:nat)
