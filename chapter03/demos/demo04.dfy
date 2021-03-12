@@ -19,9 +19,14 @@ predicate CheckIn(s:Library, s':Library, book:Book, patron:string) {
   && s' == s[book := Shelf]
 }
 
+datatype Step = 
+    | CheckOutStep(book:Book, patron:string) 
+    | CheckInStep(book:Book, patron:string)
+    
 predicate Next(s:Library, s':Library) {
-  || (exists book, patron :: CheckOut(s, s', book, patron))
-  || (exists book, patron :: CheckIn(s, s', book, patron))
+    exists step:Step :: match step 
+        case CheckOutStep(book,patron) => CheckOut(s, s', book, patron)
+        case CheckInStep(book,patron) => CheckIn(s, s', book, patron)
 }
 
 
