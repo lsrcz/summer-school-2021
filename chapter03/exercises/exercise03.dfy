@@ -17,6 +17,7 @@ The safety property is that no two clients ever hold the lock
 simultaneously.
 */
 
+datatype Constants = Constants(/* You define this ...*/)
 datatype State = State(/* You define this ...*/)
 
 predicate Init(s:State) {
