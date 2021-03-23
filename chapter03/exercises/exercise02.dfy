@@ -6,6 +6,13 @@
 //#instructor Introduces the constants idiom.
 //#instructor 
 
+// Define the state machine for the Dining Philosophers.
+// There are N philosophers sitting around a round table. 
+// Between every pair of philosophers lies a chopstick.
+// Every philosopher has three possible actions:
+//  * Acquire the chopstick to their left.
+//  * Acquire the chopstick to their right.
+//  * Release both chopsticks (in a single step). 
 
 datatype Constants = Constants(tableSize:nat)
 
@@ -52,18 +59,6 @@ predicate ReleaseBoth(c:Constants, s:State, s':State, pi:nat) {
 //#elide    && s' == s.(philosophers := s.philosophers[pi := Pair(false, false)])
 }
  
-function PhilosopherToTheLeftOf(c:Constants, i:nat) : nat 
-    requires WellFormedConstants(c)
-{
-    (i+1) % c.tableSize
-}
-
-function PhilosopherToTheRightOf(c:Constants, i:nat) : nat 
-    requires WellFormedConstants(c)
-{
-    (i-1) % c.tableSize
-}
-
 predicate Next(c:Constants, s:State, s':State) {
 //#elide    exists pi:nat :: 
 //#elide    (|| AcquireLeft(c, s, s', pi)
@@ -71,49 +66,61 @@ predicate Next(c:Constants, s:State, s':State) {
 //#elide     || ReleaseBoth(c, s, s', pi))
 }
 
-// here is the safety property
-predicate ForkConsistency(c:Constants, s:State) 
-{
-    && WellFormed(c, s)
-    && (forall i | 0 <= i < c.tableSize :: !(
-        && s.philosophers[i].right 
-        && s.philosophers[PhilosopherToTheRightOf(c,i)].left
-        ))
-}
-
-// here is a proof of the safety property. This lemma should verify
-// without adding a body 
-lemma ForkConsistencyLemma() 
-    ensures forall c, s | Init(c,s) :: ForkConsistency(c, s)
-    ensures forall c, s, s' | ForkConsistency(c, s) && Next(c, s, s') :: ForkConsistency(c, s')
-{
-}
-
-// this predicate and the following lemma are a way to prevent trivial
-// specifications of the problem that would prevent a philosopher from
-// having both forks
-predicate PhilosopherHasBothForks(c:Constants, s:State, pi:nat)
-    requires pi < c.tableSize
-    requires WellFormed(c, s)
-{
-    && s.philosophers[pi].left
-    && s.philosophers[pi].right
-}
-
-lemma PseudoLiveness(c:Constants, pi:nat) returns (b:seq<State>)
-    requires c.tableSize == 3
-    requires pi == 1
-    ensures 0 < |b| 
-    ensures Init(c, b[0])
-    ensures forall i | 0 <= i < |b|-1 :: Next(c, b[i], b[i+1])
-    ensures WellFormed(c, b[|b|-1])
-    ensures PhilosopherHasBothForks(c, b[|b|-1], pi)
-{
-    var s0 := State([Pair(false,false), Pair(false, false), Pair(false, false)]);
-    var s1 := State([Pair(false,false), Pair(true, false), Pair(false, false)]);
-    var s2 := State([Pair(false,false), Pair(true, true), Pair(false, false)]);
-    assert AcquireLeft(c, s0, s1, 1); // witness
-    assert AcquireRight(c, s1, s2, 1); // witness
-    b := [s0, s1, s2];
-}
-
+//#elidefunction PhilosopherToTheLeftOf(c:Constants, i:nat) : nat 
+//#elide    requires WellFormedConstants(c)
+//#elide{
+//#elide    (i+1) % c.tableSize
+//#elide}
+//#elide
+//#elidefunction PhilosopherToTheRightOf(c:Constants, i:nat) : nat 
+//#elide    requires WellFormedConstants(c)
+//#elide{
+//#elide    (i-1) % c.tableSize
+//#elide}
+//#elide
+//#elide// here is the safety property
+//#elidepredicate ForkConsistency(c:Constants, s:State) 
+//#elide{
+//#elide    && WellFormed(c, s)
+//#elide    && (forall i | 0 <= i < c.tableSize :: !(
+//#elide        && s.philosophers[i].right 
+//#elide        && s.philosophers[PhilosopherToTheRightOf(c,i)].left
+//#elide        ))
+//#elide}
+//#elide
+//#elide// here is a proof of the safety property. This lemma should verify
+//#elide// without adding a body 
+//#elidelemma ForkConsistencyLemma() 
+//#elide    ensures forall c, s | Init(c,s) :: ForkConsistency(c, s)
+//#elide    ensures forall c, s, s' | ForkConsistency(c, s) && Next(c, s, s') :: ForkConsistency(c, s')
+//#elide{
+//#elide}
+//#elide
+//#elide// this predicate and the following lemma are a way to prevent trivial
+//#elide// specifications of the problem that would prevent a philosopher from
+//#elide// having both forks
+//#elidepredicate PhilosopherHasBothForks(c:Constants, s:State, pi:nat)
+//#elide    requires pi < c.tableSize
+//#elide    requires WellFormed(c, s)
+//#elide{
+//#elide    && s.philosophers[pi].left
+//#elide    && s.philosophers[pi].right
+//#elide}
+//#elide
+//#elidelemma PseudoLiveness(c:Constants, pi:nat) returns (b:seq<State>)
+//#elide    requires c.tableSize == 3
+//#elide    requires pi == 1
+//#elide    ensures 0 < |b| 
+//#elide    ensures Init(c, b[0])
+//#elide    ensures forall i | 0 <= i < |b|-1 :: Next(c, b[i], b[i+1])
+//#elide    ensures WellFormed(c, b[|b|-1])
+//#elide    ensures PhilosopherHasBothForks(c, b[|b|-1], pi)
+//#elide{
+//#elide    var s0 := State([Pair(false,false), Pair(false, false), Pair(false, false)]);
+//#elide    var s1 := State([Pair(false,false), Pair(true, false), Pair(false, false)]);
+//#elide    var s2 := State([Pair(false,false), Pair(true, true), Pair(false, false)]);
+//#elide    assert AcquireLeft(c, s0, s1, 1); // witness
+//#elide    assert AcquireRight(c, s1, s2, 1); // witness
+//#elide    b := [s0, s1, s2];
+//#elide}
+//#elide
