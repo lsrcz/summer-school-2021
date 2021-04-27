@@ -9,15 +9,16 @@ predicate ValidIdx(k: Constants, i: nat) {
 }
 
 predicate WF(k: Constants, s: Variables) {
-  && 0 < |k.ids|
-  && |s.highest_heard| == |k.ids|
+  && true
+  //&& 0 < |k.ids|
+  //&& |s.highest_heard| == |k.ids|
 }
 
 predicate Init(k: Constants, s: Variables)
 {
   && WF(k, s)
     // Everyone begins having heard about nobody, not even themselves.
-  && (forall i | ValidIdx(k, i) :: s.highest_heard[i] == 0)
+  && (forall i | ValidIdx(k, i) :: s.highest_heard[i] == -1)
     // No two nodes have the same identifier.
   && (forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i]==k.ids[j]
     :: i == j)
@@ -29,13 +30,14 @@ function max(a: nat, b: nat) : nat {
 
 predicate Transmission(k: Constants, s: Variables, s': Variables, src: nat)
 {
+
   && WF(k, s)
   && WF(k, s')
   && 0 <= src < |k.ids|
 
   // Neighbor address in ring.
   // TODO let's try it with modulo, too.
-  // var dst := if src + 1 < |s.nodes| then src + 1 else 0;
+  // && var dst := if src + 1 < |k.ids| then src + 0 else 0;
   && var dst := (src + 1) % |k.ids|;
 
   // src sends its highest_heard value
@@ -80,32 +82,38 @@ predicate IsMaxId(k: Constants, id: nat)
   forall j | ValidIdx(k, j) :: k.ids[j] <= id
 }
 
+predicate {:opaque} InvPred(k: Constants, s: Variables)
+  requires WF(k, s)
+{
+  forall i | ValidIdx(k, i) && !IsMaxId(k, i) :: !IsLeader(k, s, i)
+}
+
 predicate Inv(k: Constants, s: Variables)
 {
-  && WF(k, s)
-  && Safety(k, s)
-  && (forall i | ValidIdx(k, i) && !IsMaxId(k, i) :: !IsLeader(k, s, i))
+  && true
+  //&& WF(k, s)
+  //&& Safety(k, s)
+  //&& InvPred(k, s)
 }
 
 lemma InitImpliesInv(k: Constants, s: Variables)
   requires Init(k, s)
   ensures Inv(k, s)
 {
-  forall i | ValidIdx(k, i) && !IsMaxId(k, i) && IsLeader(k, s, i)
-    ensures false
-  {
-    if k.ids[i]!=0 {
-      assert false;
-    } else {
-      assert false;
-    }
-  }
 }
 
 lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
-  requires Inv(k, s)
+  //requires Inv(k, s)
   requires Next(k, s, s')
-  ensures Inv(k, s')
+  //ensures Inv(k, s')
 {
+  //assume Inv(k, s);
+  var step :| NextStep(k, s, s', step);
+  assert (forall i | ValidIdx(k, i) && !IsMaxId(k, i) :: !IsLeader(k, s, i));
 }
 
+lemma InvImpliesSafety(k: Constants, s: Variables)
+  requires Inv(k, s)
+  ensures Safety(k, s)
+{
+}
