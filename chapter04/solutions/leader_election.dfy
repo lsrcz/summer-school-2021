@@ -8,19 +8,23 @@ predicate ValidIdx(k: Constants, i: nat) {
   0<=i<|k.ids|
 }
 
+predicate UniqueIDs(k: Constants) {
+  // No two nodes have the same identifier.
+  && (forall i:nat, j:nat | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i]==k.ids[j]
+    :: i == j)
+}
+
 predicate WF(k: Constants, s: Variables) {
   && 0 < |k.ids|
   && |s.highest_heard| == |k.ids|
+  && UniqueIDs(k)
 }
 
 predicate Init(k: Constants, s: Variables)
 {
   && WF(k, s)
     // Everyone begins having heard about nobody, not even themselves.
-  && (forall i | ValidIdx(k, i) :: s.highest_heard[i] == -1)
-    // No two nodes have the same identifier.
-  && (forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i]==k.ids[j]
-    :: i == j)
+  && (forall i:nat | ValidIdx(k, i) :: s.highest_heard[i] == -1)
 }
 
 function max(a: nat, b: nat) : nat {
@@ -30,7 +34,7 @@ function max(a: nat, b: nat) : nat {
 function NextIdx(k: Constants, idx: nat) : nat
   requires ValidIdx(k, idx)
 {
-  if idx + 1 < |k.ids| then idx + 0 else 0
+  if idx + 1 < |k.ids| then idx + 1 else 0
 }
 
 predicate Transmission(k: Constants, s: Variables, s': Variables, src: nat)
@@ -50,7 +54,7 @@ predicate Transmission(k: Constants, s: Variables, s': Variables, src: nat)
   && var message := max(s.highest_heard[src], k.ids[src]);
   && var dst_new_max := max(s.highest_heard[dst], message);
 
-  && s' == s.(highest_heard := s.highest_heard[dst := message])
+  && s' == s.(highest_heard := s.highest_heard[dst := dst_new_max])
 }
 
 datatype Step = TransmissionStep(src: nat)
@@ -83,19 +87,19 @@ predicate Safety(k: Constants, s: Variables)
 
 predicate IsMaxId(k: Constants, id: nat)
 {
-  forall j | ValidIdx(k, j) :: k.ids[j] <= id
+  forall j:nat | ValidIdx(k, j) :: k.ids[j] <= id
 }
 
 predicate InvPred(k: Constants, s: Variables)
   requires WF(k, s)
 {
-  forall i | ValidIdx(k, i) && !IsMaxId(k, i) :: !IsLeader(k, s, i)
+  forall i:nat | ValidIdx(k, i) && !IsMaxId(k, k.ids[i]) :: !IsLeader(k, s, i)
 }
 
 function GetIndexWithMaxIdInner(k: Constants, limit: nat) : (idx:nat)
   requires 0 < limit <= |k.ids|
   ensures 0 <= idx < limit
-  ensures forall j | 0<=j<limit :: k.ids[j] <= k.ids[idx]
+  ensures forall j:nat | 0<=j<limit :: k.ids[j] <= k.ids[idx]
 {
   if limit==1
   then 0
@@ -129,8 +133,8 @@ predicate Between(k: Constants, startExclusive: nat, idx: nat, endInclusive: nat
 predicate IDOnChordDominatesHeard(k: Constants, s: Variables)
   requires WF(k, s)
 {
-  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
-    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: s.highest_heard[m] >= k.ids[i]
+  forall i:nat, j:nat | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
+    forall m:nat | ValidIdx(k, m) && Between(k, i, m, j) :: s.highest_heard[m] >= k.ids[i]
 }
 
 // An identifier that has "reached" a distant node some way around the
@@ -138,8 +142,14 @@ predicate IDOnChordDominatesHeard(k: Constants, s: Variables)
 predicate IDOnChordDominatesIDs(k: Constants, s: Variables)
   requires WF(k, s)
 {
-  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
-    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: k.ids[i] > k.ids[m]
+  forall i:nat, j:nat | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] && i != j::
+    forall m:nat | ValidIdx(k, m) && Between(k, i, m, j) :: k.ids[i] >= k.ids[m]
+}
+
+predicate HighestHeardDominatesID(k: Constants, s: Variables)
+  requires WF(k, s)
+{
+  forall i:nat | ValidIdx(k, i) && s.highest_heard[i] != -1 :: s.highest_heard[i] >= k.ids[i]
 }
 
 predicate Inv(k: Constants, s: Variables)
@@ -149,6 +159,7 @@ predicate Inv(k: Constants, s: Variables)
   && InvPred(k, s)
   && IDOnChordDominatesHeard(k, s)
   && IDOnChordDominatesIDs(k, s)
+  && HighestHeardDominatesID(k, s)
 }
 
 lemma InitImpliesInv(k: Constants, s: Variables)
@@ -164,24 +175,42 @@ lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
 {
   //assume Inv(k, s);
   var step :| NextStep(k, s, s', step);
-  assert (forall i | ValidIdx(k, i) && !IsMaxId(k, i) :: !IsLeader(k, s, i));
+  assert (forall i:nat | ValidIdx(k, i) && !IsMaxId(k, k.ids[i]) :: !IsLeader(k, s, i));
   assert Transmission(k, s, s', step.src);
-  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s'.highest_heard[j] ensures
-    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: s'.highest_heard[m] >= k.ids[i] {
-    forall m | ValidIdx(k, m) && Between(k, i, m, j) ensures s'.highest_heard[m] >= k.ids[i] {
+  /*forall i:nat, j:nat | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s'.highest_heard[j] ensures
+    forall m:nat | ValidIdx(k, m) && Between(k, i, m, j) :: s'.highest_heard[m] >= k.ids[i] {
+    forall m:nat | ValidIdx(k, m) && Between(k, i, m, j) ensures s'.highest_heard[m] >= k.ids[i] {
       var src := step.src;
       var dest := NextIdx(k, src);
       if |k.ids|==1 {
         assert s'.highest_heard[m] >= k.ids[i];
       } else if dest == j {
+        assert src != dest;
         if m == j {
           assert s'.highest_heard[m] >= k.ids[i];
         } else {
           if s'.highest_heard[j] == k.ids[src] {
             // new little chord -- should be a contradiction
-            assert src != dest; // WHOAH, DUDE
             assert s.highest_heard[src] == s'.highest_heard[src];
-            assert s'.highest_heard[m] >= k.ids[i];
+            assert s.highest_heard[m] == s'.highest_heard[m];
+            assert forall ii:nat, ij:nat | ValidIdx(k, ii) && ValidIdx(k, ij) && k.ids[ii] == s.highest_heard[ij] ::
+                forall im:nat | ValidIdx(k, im) && Between(k, ii, im, ij) :: k.ids[ii] > k.ids[im];
+
+            if (s.highest_heard[j] != k.ids[src]) {
+                if(k.ids[src] > k.ids[i]) {
+                    assert s'.highest_heard[m] >= k.ids[i];
+                } else if (k.ids[src] < k.ids[i]) {
+                    assert s'.highest_heard[m] >= k.ids[i];
+                } else {
+                    assert k.ids[src] == k.ids[i];
+                    assert src == i;
+                    assert s'.highest_heard[m] >= k.ids[i];
+                }
+            } else {
+                //assert s.highest_heard[m] >= k.ids[i];
+                //assert s'.highest_heard[m] >= k.ids[i];
+                assert false;
+            }
           } else {
             assert s'.highest_heard[m] >= k.ids[i];
           }
@@ -191,9 +220,66 @@ lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
         assert s'.highest_heard[m] >= k.ids[i];
       }
     }
-  }
+  }*/
+
+  /*forall i:nat | ValidIdx(k, i) && s'.highest_heard[i] != -1 ensures s'.highest_heard[i] >= k.ids[i] {
+    var src := step.src;
+    var dest := NextIdx(k, src); 
+    if (dest == i) {
+      assert s'.highest_heard[i] == 
+      assert s'.highest_heard[i] >= k.ids[i];
+    } else {
+      assert s'.highest_heard[i] >= k.ids[i];
+    } 
+  }*/
+  assert HighestHeardDominatesID(k, s');
   assert IDOnChordDominatesHeard(k, s');
+  /*forall i:nat, j:nat | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s'.highest_heard[j] && i != j ensures
+    forall m:nat | ValidIdx(k, m) && Between(k, i, m, j) :: k.ids[i] >= k.ids[m] {
+    forall m:nat | ValidIdx(k, m) && Between(k, i, m, j) ensures k.ids[i] >= k.ids[m] {
+      var src := step.src;
+      var dest := NextIdx(k, src);
+      if |k.ids|==1 {
+      } else {
+        if(m == i) {      
+          assert k.ids[i] >= k.ids[m];
+        } else if (m == j) {
+          if(dest == j) {
+            if s'.highest_heard[dest] == k.ids[src] {
+              assert k.ids[i] >= k.ids[m];
+            } else {
+              assert k.ids[i] >= k.ids[m];
+            }
+          } else {
+            assert k.ids[i] >= k.ids[m];
+          }
+        } else {
+          assert k.ids[i] >= k.ids[m];
+        }
+      }            
+    }
+  }*/
   assert IDOnChordDominatesIDs(k, s');
+  forall i:nat | ValidIdx(k, i) && !IsMaxId(k, k.ids[i]) ensures !IsLeader(k, s', i) {
+    var src := step.src;
+    var dest := NextIdx(k, src);
+    if |k.ids|==1 {
+      forall j:nat | ValidIdx(k, j) ensures k.ids[j] <= i {
+        assert j == i;
+      }
+      assert IsMaxId(k,k.ids[i]);
+      //assert !IsLeader(k, s', i);
+    } else if i == src {
+      assert !IsLeader(k, s, i);
+      assert !IsLeader(k, s', i);
+    } else if i == dest {
+      assert !IsLeader(k, s, i);
+      assert !IsLeader(k, s', i);
+    } else {
+      assert !IsLeader(k, s', i);
+    }
+  }
+  assert InvPred(k, s');
 //  forall i, j | IsLeader(k, s', i) && IsLeader(k, s', j)
 //  ensures i == j
 //  {
