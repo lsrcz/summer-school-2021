@@ -1,3 +1,5 @@
+// Single-Server Lock Service
+
 /*
 Model a lock service that consists of a single server and an
 arbitrary number of clients.

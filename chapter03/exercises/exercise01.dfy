@@ -1,3 +1,4 @@
+// Coke Machine
 //#instructor This is the first state machine specification example.
 //#instructor Its complexity is about the same as the library. We 
 //#instructor provide the boilerplate for everything, but leave the state

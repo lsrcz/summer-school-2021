@@ -27,6 +27,12 @@ function max(a: nat, b: nat) : nat {
   if a > b then a else b
 }
 
+function NextIdx(k: Constants, idx: nat) : nat
+  requires ValidIdx(k, idx)
+{
+  if idx + 1 < |k.ids| then idx + 0 else 0
+}
+
 predicate Transmission(k: Constants, s: Variables, s': Variables, src: nat)
 {
 
@@ -36,7 +42,7 @@ predicate Transmission(k: Constants, s: Variables, s': Variables, src: nat)
 
   // Neighbor address in ring.
   // TODO let's try it with modulo, too.
-  && var dst := if src + 1 < |k.ids| then src + 0 else 0;
+  && var dst := NextIdx(k, src);
   // Yeah turns out modulo makes dafny stupid.
   // && var dst := (src + 1) % |k.ids|;
 
@@ -107,11 +113,33 @@ function GetIndexWithMaxId(k: Constants) : nat
   GetIndexWithMaxIdInner(k, |k.ids|)
 }
 
-predicate Manos'DumbIdea(k: Constants, s: Variables)
+predicate Between(k: Constants, startExclusive: nat, idx: nat, endInclusive: nat)
+  requires ValidIdx(k, startExclusive)
+  requires ValidIdx(k, idx)
+  requires ValidIdx(k, endInclusive)
+{
+  if startExclusive < endInclusive
+  then startExclusive < idx <= endInclusive
+  else idx <= startExclusive || endInclusive < idx
+}
+
+// An identifier that has "reached" a distant node some way around the
+// ring is at least as high as the highest_heard of every index it has
+// passed.
+predicate IDOnChordDominatesHeard(k: Constants, s: Variables)
   requires WF(k, s)
 {
-  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && i==GetIndexWithMaxId(k)
-    :: s.highest_heard[i] >= s.highest_heard[j]
+  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
+    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: s.highest_heard[m] >= k.ids[i]
+}
+
+// An identifier that has "reached" a distant node some way around the
+// ring is at least as high as the id of every node it has passed.
+predicate IDOnChordDominatesIDs(k: Constants, s: Variables)
+  requires WF(k, s)
+{
+  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
+    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: k.ids[i] > k.ids[m]
 }
 
 predicate Inv(k: Constants, s: Variables)
@@ -119,7 +147,8 @@ predicate Inv(k: Constants, s: Variables)
   && WF(k, s)
   && Safety(k, s)
   && InvPred(k, s)
-  && Manos'DumbIdea(k, s)
+  && IDOnChordDominatesHeard(k, s)
+  && IDOnChordDominatesIDs(k, s)
 }
 
 lemma InitImpliesInv(k: Constants, s: Variables)
@@ -137,17 +166,59 @@ lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
   var step :| NextStep(k, s, s', step);
   assert (forall i | ValidIdx(k, i) && !IsMaxId(k, i) :: !IsLeader(k, s, i));
   assert Transmission(k, s, s', step.src);
-  assert Manos'DumbIdea(k, s');
-  forall i, j | IsLeader(k, s', i) && IsLeader(k, s', j)
-  ensures i == j
-  {
+  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s'.highest_heard[j] ensures
+    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: s'.highest_heard[m] >= k.ids[i] {
+    forall m | ValidIdx(k, m) && Between(k, i, m, j) ensures s'.highest_heard[m] >= k.ids[i] {
+      if i==j {
+        assert s'.highest_heard[m] >= k.ids[i];
+      } else {
+        if m == step.src {
+ 	        var src := m;
+ 	        var dst := NextIdx(k, step.src);
+ 	        if src == dst {
+ 	          // ring is of size 1
+ 	          assert s'.highest_heard[m] >= k.ids[i];
+ 	        } else if dst == i {  // we transmitted from i-1 to i
+ 	          assert s'.highest_heard[src] == s.highest_heard[src];
+ 	          if j != dst {
+ 	            //s.highest_heard[j] == s'.highest_heard[j]
+ 	            assert s.highest_heard[src] >= k.ids[i]; // HERE
+ 	          } else {
+ 	            assert s.highest_heard[src] >= k.ids[i]; // HERE
+ 	          }
+ 	          assert s'.highest_heard[src] >= k.ids[i];
+ 	        } else if dst == j {
+ 	          assert s'.highest_heard[m] >= k.ids[i]; // HERE
+ 	        } else {
+ 	          assert s'.highest_heard[m] == s.highest_heard[m];
+ 	          assert IDOnChordDominatesHeard(k, s);
+ 	//  assert forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
+ 	//    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: s.highest_heard[m] >= k.ids[i]
+ 	          assert s.highest_heard[m] >= k.ids[i];
+ 	          assert s'.highest_heard[m] >= k.ids[i];
+ 	        }
+ 	      } else if m == NextIdx(k, step.src) {
+ 	        assert s'.highest_heard[m] >= k.ids[i];
+ 	      } else {
+ 	        assert s'.highest_heard[m] >= k.ids[i];
+ 	      }
+      }
+    }
   }
-  forall i | ValidIdx(k, i) && !IsMaxId(k, i)
-  ensures !IsLeader(k, s', i)
-  {
-  }
-  assert Safety(k, s');
-  assert InvPred(k, s');
+  assert IDOnChordDominatesHeard(k, s');
+  assert IDOnChordDominatesIDs(k, s');
+//  forall i, j | IsLeader(k, s', i) && IsLeader(k, s', j)
+//  ensures i == j
+//  {
+//    //here
+//  }
+//  forall i | ValidIdx(k, i) && !IsMaxId(k, i)
+//  ensures !IsLeader(k, s', i)
+//  {
+//    //here
+//  }::
+//  assert Safety(k, s');
+//  assert InvPred(k, s');
 }
 
 lemma InvImpliesSafety(k: Constants, s: Variables)

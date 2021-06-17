@@ -1,3 +1,5 @@
+// Dining Philosophers
+
 //#instructor 
 //#instructor 
 //#instructor Relative to the coke machine, the students need to
