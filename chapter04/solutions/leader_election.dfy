@@ -120,7 +120,7 @@ predicate Between(k: Constants, startExclusive: nat, idx: nat, endInclusive: nat
 {
   if startExclusive < endInclusive
   then startExclusive < idx <= endInclusive
-  else idx <= startExclusive || endInclusive < idx
+  else idx <= endInclusive || startExclusive < idx
 }
 
 // An identifier that has "reached" a distant node some way around the
@@ -169,39 +169,26 @@ lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
   forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s'.highest_heard[j] ensures
     forall m | ValidIdx(k, m) && Between(k, i, m, j) :: s'.highest_heard[m] >= k.ids[i] {
     forall m | ValidIdx(k, m) && Between(k, i, m, j) ensures s'.highest_heard[m] >= k.ids[i] {
-      if i==j {
+      var src := step.src;
+      var dest := NextIdx(k, src);
+      if |k.ids|==1 {
         assert s'.highest_heard[m] >= k.ids[i];
+      } else if dest == j {
+        if m == j {
+          assert s'.highest_heard[m] >= k.ids[i];
+        } else {
+          if s'.highest_heard[j] == k.ids[src] {
+            // new little chord -- should be a contradiction
+            assert src != dest; // WHOAH, DUDE
+            assert s.highest_heard[src] == s'.highest_heard[src];
+            assert s'.highest_heard[m] >= k.ids[i];
+          } else {
+            assert s'.highest_heard[m] >= k.ids[i];
+          }
+        }
       } else {
-        if m == step.src {
- 	        var src := m;
- 	        var dst := NextIdx(k, step.src);
- 	        if src == dst {
- 	          // ring is of size 1
- 	          assert s'.highest_heard[m] >= k.ids[i];
- 	        } else if dst == i {  // we transmitted from i-1 to i
- 	          assert s'.highest_heard[src] == s.highest_heard[src];
- 	          if j != dst {
- 	            //s.highest_heard[j] == s'.highest_heard[j]
- 	            assert s.highest_heard[src] >= k.ids[i]; // HERE
- 	          } else {
- 	            assert s.highest_heard[src] >= k.ids[i]; // HERE
- 	          }
- 	          assert s'.highest_heard[src] >= k.ids[i];
- 	        } else if dst == j {
- 	          assert s'.highest_heard[m] >= k.ids[i]; // HERE
- 	        } else {
- 	          assert s'.highest_heard[m] == s.highest_heard[m];
- 	          assert IDOnChordDominatesHeard(k, s);
- 	//  assert forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
- 	//    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: s.highest_heard[m] >= k.ids[i]
- 	          assert s.highest_heard[m] >= k.ids[i];
- 	          assert s'.highest_heard[m] >= k.ids[i];
- 	        }
- 	      } else if m == NextIdx(k, step.src) {
- 	        assert s'.highest_heard[m] >= k.ids[i];
- 	      } else {
- 	        assert s'.highest_heard[m] >= k.ids[i];
- 	      }
+        // should be easy by virtue of invariants on s being the same
+        assert s'.highest_heard[m] >= k.ids[i];
       }
     }
   }
