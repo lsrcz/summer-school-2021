@@ -49,8 +49,10 @@ predicate Transmission(k: Constants, s: Variables, s': Variables, src: nat)
   // src sends the max of its highest_heard value and its own id.
   && var message := max(s.highest_heard[src], k.ids[src]);
   && var dst_new_max := max(s.highest_heard[dst], message);
+  // Here's bug 1: we compute the max of the message with the highest_heard of dst,
+  // and then ignore it.
 
-  && s' == s.(highest_heard := s.highest_heard[dst := message])
+  && s' == s.(highest_heard := s.highest_heard[dst := dst_new_max])
 }
 
 datatype Step = TransmissionStep(src: nat)
@@ -86,12 +88,6 @@ predicate IsMaxId(k: Constants, id: nat)
   forall j | ValidIdx(k, j) :: k.ids[j] <= id
 }
 
-predicate InvPred(k: Constants, s: Variables)
-  requires WF(k, s)
-{
-  forall i | ValidIdx(k, i) && !IsMaxId(k, i) :: !IsLeader(k, s, i)
-}
-
 function GetIndexWithMaxIdInner(k: Constants, limit: nat) : (idx:nat)
   requires 0 < limit <= |k.ids|
   ensures 0 <= idx < limit
@@ -123,6 +119,12 @@ predicate Between(k: Constants, startExclusive: nat, idx: nat, endInclusive: nat
   else idx <= endInclusive || startExclusive < idx
 }
 
+predicate NonMaxIdsNeverBecomeLeader(k: Constants, s: Variables)
+  requires WF(k, s)
+{
+  forall i | ValidIdx(k, i) && !IsMaxId(k, i) :: !IsLeader(k, s, i)
+}
+
 // An identifier that has "reached" a distant node some way around the
 // ring is at least as high as the highest_heard of every index it has
 // passed.
@@ -146,7 +148,7 @@ predicate Inv(k: Constants, s: Variables)
 {
   && WF(k, s)
   && Safety(k, s)
-  && InvPred(k, s)
+  && NonMaxIdsNeverBecomeLeader(k, s)
   && IDOnChordDominatesHeard(k, s)
   && IDOnChordDominatesIDs(k, s)
 }
@@ -162,6 +164,25 @@ lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
   requires Next(k, s, s')
   ensures Inv(k, s')
 {
+  var step :| NextStep(k, s, s', step);
+  forall i, j, m
+    | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s'.highest_heard[j] && ValidIdx(k, m) && Between(k, i, m, j)
+    ensures s'.highest_heard[m] >= k.ids[i]
+  {
+    var dst := NextIdx(k, step.src);
+    if dst==j {
+     i --> m --> src
+     i --> m --> j'
+      assert s.highest_heard[step.src] == k.ids[i];
+      assert Between(k, i, m, step.src);
+      assert s'.highest_heard[m] >= k.ids[i]; // use invariant ind hypothesis
+    } else {
+      assert s'.highest_heard[m] >= k.ids[i];
+    }
+  }
+  assert IDOnChordDominatesHeard(k, s');
+  assert IDOnChordDominatesIDs(k, s');
+  assert NonMaxIdsNeverBecomeLeader(k, s');
 }
 
 lemma InvImpliesSafety(k: Constants, s: Variables)
