@@ -8,8 +8,13 @@ predicate ValidIdx(k: Constants, i: nat) {
   0<=i<|k.ids|
 }
 
+predicate UniqueIds(k: Constants) {
+  (forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i]==k.ids[j] :: i == j)
+}
+
 predicate WF(k: Constants, s: Variables) {
   && 0 < |k.ids|
+  && UniqueIds(k)
   && |s.highest_heard| == |k.ids|
 }
 
@@ -18,9 +23,6 @@ predicate Init(k: Constants, s: Variables)
   && WF(k, s)
     // Everyone begins having heard about nobody, not even themselves.
   && (forall i | ValidIdx(k, i) :: s.highest_heard[i] == -1)
-    // No two nodes have the same identifier.
-  && (forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i]==k.ids[j]
-    :: i == j)
 }
 
 function max(a: nat, b: nat) : nat {
@@ -169,13 +171,27 @@ lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
     | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s'.highest_heard[j] && ValidIdx(k, m) && Between(k, i, m, j)
     ensures s'.highest_heard[m] >= k.ids[i]
   {
-    var dst := NextIdx(k, step.src);
+    var src := step.src;
+    var dst := NextIdx(k, src);
     if dst==j {
-     i --> m --> src
-     i --> m --> j'
-      assert s.highest_heard[step.src] == k.ids[i];
-      assert Between(k, i, m, step.src);
-      assert s'.highest_heard[m] >= k.ids[i]; // use invariant ind hypothesis
+      var message := max(s.highest_heard[src], k.ids[src]);
+      var dst_new_max := max(s.highest_heard[dst], message);
+      assert s'.highest_heard[j] == k.ids[i];
+      assert dst_new_max == k.ids[i];
+      assert message == k.ids[i];
+      assert Between(k, i, m, dst);
+      assert s.highest_heard[src] == k.ids[i] || k.ids[src] == k.ids[i];
+      if i == src
+      {
+        assert s'.highest_heard[m] >= k.ids[i]; // some other proof on first hop
+      }
+      else
+      {
+        assert k.ids[src] != k.ids[i];  // FREAKY!
+        assert s.highest_heard[src] == k.ids[i];
+        assert Between(k, i, m, src);
+        assert s'.highest_heard[m] >= k.ids[i]; // use invariant ind hypothesis
+      }
     } else {
       assert s'.highest_heard[m] >= k.ids[i];
     }
