@@ -91,41 +91,14 @@ predicate IsMaxId(k: Constants, i: nat)
   forall j | ValidIdx(k, j) :: k.ids[j] <= k.ids[i]
 }
 
-function GetIndexWithMaxIdInner(k: Constants, limit: nat) : (idx:nat)
-  requires 0 < limit <= |k.ids|
-  ensures 0 <= idx < limit
-  ensures forall j | 0<=j<limit :: k.ids[j] <= k.ids[idx]
-{
-  if limit==1
-  then 0
-  else
-    var prevIdx := GetIndexWithMaxIdInner(k, limit-1);
-    var thisId := k.ids[limit-1];
-    if k.ids[prevIdx] >= thisId
-    then prevIdx
-    else limit-1
-}
-
-function GetIndexWithMaxId(k: Constants) : nat
-  requires 0 < |k.ids|
-{
-  GetIndexWithMaxIdInner(k, |k.ids|)
-}
-
-predicate Between(k: Constants, startExclusive: nat, idx: nat, endInclusive: nat)
+predicate Between(k: Constants, startExclusive: nat, idx: nat, endExclusive: nat)
   requires ValidIdx(k, startExclusive)
   requires ValidIdx(k, idx)
-  requires ValidIdx(k, endInclusive)
+  requires ValidIdx(k, endExclusive)
 {
-  if startExclusive < endInclusive
-  then startExclusive < idx <= endInclusive
-  else idx <= endInclusive || startExclusive < idx
-}
-
-predicate NonMaxIdsNeverBecomeLeader(k: Constants, s: Variables)
-  requires WF(k, s)
-{
-  forall i | ValidIdx(k, i) && !IsMaxId(k, i) :: !IsLeader(k, s, i)
+  if startExclusive < endExclusive
+  then startExclusive < idx < endExclusive
+  else idx < endExclusive || startExclusive < idx
 }
 
 // An identifier that has "reached" a distant node some way around the
@@ -134,14 +107,13 @@ predicate IDOnChordDominatesIDs(k: Constants, s: Variables)
   requires WF(k, s)
 {
   forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
-    forall m | ValidIdx(k, m) && Between(k, i, m, j) && m!=j :: k.ids[i] > k.ids[m]
+    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: k.ids[i] > k.ids[m]
 }
 
 predicate Inv(k: Constants, s: Variables)
 {
   && WF(k, s)
   && Safety(k, s)
-  && NonMaxIdsNeverBecomeLeader(k, s)
   && IDOnChordDominatesIDs(k, s)
 }
 
