@@ -129,16 +129,6 @@ predicate NonMaxIdsNeverBecomeLeader(k: Constants, s: Variables)
 }
 
 // An identifier that has "reached" a distant node some way around the
-// ring is at least as high as the highest_heard of every index it has
-// passed.
-predicate IDOnChordDominatesHeard(k: Constants, s: Variables)
-  requires WF(k, s)
-{
-  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
-    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: s.highest_heard[m] >= k.ids[i]
-}
-
-// An identifier that has "reached" a distant node some way around the
 // ring is at least as high as the id of every node it has passed.
 predicate IDOnChordDominatesIDs(k: Constants, s: Variables)
   requires WF(k, s)
@@ -152,7 +142,6 @@ predicate Inv(k: Constants, s: Variables)
   && WF(k, s)
   && Safety(k, s)
   && NonMaxIdsNeverBecomeLeader(k, s)
-  && IDOnChordDominatesHeard(k, s)
   && IDOnChordDominatesIDs(k, s)
 }
 
@@ -167,32 +156,6 @@ lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
   requires Next(k, s, s')
   ensures Inv(k, s')
 {
-  var step :| NextStep(k, s, s', step);
-  forall i, j, m
-    | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s'.highest_heard[j] && ValidIdx(k, m) && Between(k, i, m, j)   // IDOnChordDominatesHeard
-    ensures s'.highest_heard[m] >= k.ids[i]
-  {
-    var src := step.src;
-//    var dst := NextIdx(k, src);
-  }
-  assert IDOnChordDominatesHeard(k, s');
-  assert IDOnChordDominatesIDs(k, s');  // maybe discard this invariant?
-  forall i | ValidIdx(k, i) && !IsMaxId(k, i)
-    ensures !IsLeader(k, s', i) {
-    if IsLeader(k, s', i) {
-      assert s'.highest_heard[i] == k.ids[i];  // defn IsLeader
-      if (|k.ids|==1) {
-        assert IsMaxId(k, k.ids[i]);
-        assert false; // baby ring
-      } else {
-        var m := NextIdx(k, i);
-        assert m != i;
-        assert k.ids[i] > k.ids[m];
-        assert false; // contradiction
-      }
-    }
-  }
-  assert NonMaxIdsNeverBecomeLeader(k, s');
 }
 
 lemma InvImpliesSafety(k: Constants, s: Variables)
