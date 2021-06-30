@@ -32,7 +32,7 @@ function max(a: nat, b: nat) : nat {
 function NextIdx(k: Constants, idx: nat) : nat
   requires ValidIdx(k, idx)
 {
-  if idx + 1 < |k.ids| then idx + 0 else 0
+  if idx + 1 < |k.ids| then idx + 1 else 0
 }
 
 predicate Transmission(k: Constants, s: Variables, s': Variables, src: nat)
@@ -168,7 +168,7 @@ lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
 {
   var step :| NextStep(k, s, s', step);
   forall i, j, m
-    | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s'.highest_heard[j] && ValidIdx(k, m) && Between(k, i, m, j)
+    | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s'.highest_heard[j] && ValidIdx(k, m) && Between(k, i, m, j)   // IDOnChordDominatesHeard
     ensures s'.highest_heard[m] >= k.ids[i]
   {
     var src := step.src;
@@ -183,6 +183,20 @@ lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
       assert s.highest_heard[src] == k.ids[i] || k.ids[src] == k.ids[i];
       if i == src
       {
+        assert Between(k, i, m, j);
+//        if i < j {
+//          // startExclusive < idx <= endInclusive
+//          assert m == j;
+//        } else {
+//          assert dst == NextIdx(k, src);
+//          // wrapping
+//          // idx <= endInclusive || startExclusive < idx
+//          // m <= j || i < m
+//          assert i == |k.ids|-1;
+//          assert j == 0;
+//          assert m == j;
+//        }
+        assert m == j;
         assert s'.highest_heard[m] >= k.ids[i]; // some other proof on first hop
       }
       else
