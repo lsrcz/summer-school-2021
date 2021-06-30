@@ -85,9 +85,10 @@ predicate Safety(k: Constants, s: Variables)
   forall i, j | IsLeader(k, s, i) && IsLeader(k, s, j) :: i == j
 }
 
-predicate IsMaxId(k: Constants, id: nat)
+predicate IsMaxId(k: Constants, i: nat)
+  requires ValidIdx(k, i)
 {
-  forall j | ValidIdx(k, j) :: k.ids[j] <= id
+  forall j | ValidIdx(k, j) :: k.ids[j] <= k.ids[i]
 }
 
 function GetIndexWithMaxIdInner(k: Constants, limit: nat) : (idx:nat)
@@ -143,7 +144,7 @@ predicate IDOnChordDominatesIDs(k: Constants, s: Variables)
   requires WF(k, s)
 {
   forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
-    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: k.ids[i] > k.ids[m]
+    forall m | ValidIdx(k, m) && Between(k, i, m, j) && m!=j :: k.ids[i] > k.ids[m]
 }
 
 predicate Inv(k: Constants, s: Variables)
@@ -172,46 +173,25 @@ lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
     ensures s'.highest_heard[m] >= k.ids[i]
   {
     var src := step.src;
-    var dst := NextIdx(k, src);
-    if dst==j {
-      var message := max(s.highest_heard[src], k.ids[src]);
-      var dst_new_max := max(s.highest_heard[dst], message);
-      assert s'.highest_heard[j] == k.ids[i];
-      assert dst_new_max == k.ids[i];
-      assert message == k.ids[i];
-      assert Between(k, i, m, dst);
-      assert s.highest_heard[src] == k.ids[i] || k.ids[src] == k.ids[i];
-      if i == src
-      {
-        assert Between(k, i, m, j);
-//        if i < j {
-//          // startExclusive < idx <= endInclusive
-//          assert m == j;
-//        } else {
-//          assert dst == NextIdx(k, src);
-//          // wrapping
-//          // idx <= endInclusive || startExclusive < idx
-//          // m <= j || i < m
-//          assert i == |k.ids|-1;
-//          assert j == 0;
-//          assert m == j;
-//        }
-        assert m == j;
-        assert s'.highest_heard[m] >= k.ids[i]; // some other proof on first hop
-      }
-      else
-      {
-        assert k.ids[src] != k.ids[i];  // FREAKY!
-        assert s.highest_heard[src] == k.ids[i];
-        assert Between(k, i, m, src);
-        assert s'.highest_heard[m] >= k.ids[i]; // use invariant ind hypothesis
-      }
-    } else {
-      assert s'.highest_heard[m] >= k.ids[i];
-    }
+//    var dst := NextIdx(k, src);
   }
   assert IDOnChordDominatesHeard(k, s');
-  assert IDOnChordDominatesIDs(k, s');
+  assert IDOnChordDominatesIDs(k, s');  // maybe discard this invariant?
+  forall i | ValidIdx(k, i) && !IsMaxId(k, i)
+    ensures !IsLeader(k, s', i) {
+    if IsLeader(k, s', i) {
+      assert s'.highest_heard[i] == k.ids[i];  // defn IsLeader
+      if (|k.ids|==1) {
+        assert IsMaxId(k, k.ids[i]);
+        assert false; // baby ring
+      } else {
+        var m := NextIdx(k, i);
+        assert m != i;
+        assert k.ids[i] > k.ids[m];
+        assert false; // contradiction
+      }
+    }
+  }
   assert NonMaxIdsNeverBecomeLeader(k, s');
 }
 
