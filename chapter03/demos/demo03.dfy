@@ -25,26 +25,7 @@ predicate Next(s:Library, s':Library) {
 }
 
 
-
-// name has at most book checked out.
-//
-// If you're coming from TLA+ background, you might have written
-// this using set cardinality:
-//   |BooksOutstanding(s, name)| <= 1
-// For a solution like that, see demo00_alternate.dfy.
-predicate CheckedOutTo(s:Library, book:Book, name: string) {
-  && book in s
-  && s[book] == Patron(name)
-}
-
-predicate HasAtMostOneBook(s: Library, name: string) {
-  forall book1, book2 ::
-    ( CheckedOutTo(s, book1, name) && CheckedOutTo(s, book2, name)
-      ==> book1 == book2 )
-}
-
 predicate Safety(s:Library) {
-  forall name :: HasAtMostOneBook(s, name)
 }
 
 predicate Inv(s: Library) {
@@ -52,42 +33,8 @@ predicate Inv(s: Library) {
 }
 
 lemma SafetyProof()
-  ensures forall s :: Init(s) ==> Inv(s)
-  ensures forall s, s' :: Inv(s) && Next(s, s') ==> Inv(s')
-  ensures forall s :: Inv(s) ==> Safety(s)
+  ensures forall s | Init(s) :: Inv(s)
+  ensures forall s, s' | Inv(s) && Next(s, s') :: Inv(s')
+  ensures forall s | Inv(s) :: Safety(s)
 {
-  forall s, s' | Inv(s) && Next(s, s') ensures Inv(s') {
-    InductiveStep(s, s');
-  }
-}
-
-
-lemma InductiveStep(s: Library, s': Library)
-  requires Inv(s)
-  requires Next(s, s')
-  ensures Inv(s')
-{
-  forall name ensures HasAtMostOneBook(s', name) {
-    assert HasAtMostOneBook(s, name);
-    if book, patron :| CheckOut(s, s', book, patron) {
-      assert forall book, name | name != patron
-        :: CheckedOutTo(s, book, name) == CheckedOutTo(s', book, name);
-// Here's another equivalent proof of the CheckOut case that I
-// developed another time I tried this:
-//    if !CheckedOutTo(s, book1, name) {
-//      assert book1 == book;
-//    }
-//    if !CheckedOutTo(s, book2, name) {
-//      assert book2 == book;
-//    }
-    } else {
-      var book, patron :| CheckIn(s, s', book, patron);
-      forall book1, book2 |
-        CheckedOutTo(s', book1, name) && CheckedOutTo(s', book2, name)
-        ensures book1 == book2 {
-        assert CheckedOutTo(s, book1, name);
-        assert CheckedOutTo(s, book2, name);
-      }
-    }
-  }
 }

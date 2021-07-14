@@ -12,15 +12,15 @@ predicate Init(s:State) {
 }
 
 predicate Activate(s:State, s':State) {
-    s'.switch = On
+    s'.switch == On
 }
 
 predicate Deactivate(s:State, s':State) {
-    s'.switch = Off
+    s'.switch == Off
 }
 
 predicate Toggle(s:State, s':State) {
-    s'.switch = if s.On? then Off else On
+    s'.switch == if s.switch.On? then Off else On
 }
 
 predicate Next(s:State, s':State) {

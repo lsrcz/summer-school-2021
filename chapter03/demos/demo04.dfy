@@ -23,10 +23,14 @@ datatype Step =
     | CheckOutStep(book:Book, patron:string) 
     | CheckInStep(book:Book, patron:string)
     
+predicate NextStep(s:Library, s':Library, step:Step) {
+  match step
+    case CheckOutStep(book,patron) => CheckOut(s, s', book, patron)
+    case CheckInStep(book,patron) => CheckIn(s, s', book, patron)
+}
+
 predicate Next(s:Library, s':Library) {
-    exists step:Step :: match step 
-        case CheckOutStep(book,patron) => CheckOut(s, s', book, patron)
-        case CheckInStep(book,patron) => CheckIn(s, s', book, patron)
+    exists step:Step :: NextStep(s, s', step)
 }
 
 
@@ -57,9 +61,9 @@ predicate Inv(s: Library) {
 }
 
 lemma SafetyProof()
-  ensures forall s :: Init(s) ==> Inv(s)
-  ensures forall s, s' :: Inv(s) && Next(s, s') ==> Inv(s')
-  ensures forall s :: Inv(s) ==> Safety(s)
+  ensures forall s | Init(s) :: Inv(s)
+  ensures forall s, s' | Inv(s) && Next(s, s') :: Inv(s')
+  ensures forall s | Inv(s) :: Safety(s)
 {
   forall s, s' | Inv(s) && Next(s, s') ensures Inv(s') {
     InductiveStep(s, s');
@@ -72,27 +76,21 @@ lemma InductiveStep(s: Library, s': Library)
   requires Next(s, s')
   ensures Inv(s')
 {
+  var step :| NextStep(s, s', step);
   forall name ensures HasAtMostOneBook(s', name) {
     assert HasAtMostOneBook(s, name);
-    if book, patron :| CheckOut(s, s', book, patron) {
-      assert forall book, name | name != patron
-        :: CheckedOutTo(s, book, name) == CheckedOutTo(s', book, name);
-// Here's another equivalent proof of the CheckOut case that I
-// developed another time I tried this:
-//    if !CheckedOutTo(s, book1, name) {
-//      assert book1 == book;
-//    }
-//    if !CheckedOutTo(s, book2, name) {
-//      assert book2 == book;
-//    }
-    } else {
-      var book, patron :| CheckIn(s, s', book, patron);
-      forall book1, book2 |
-        CheckedOutTo(s', book1, name) && CheckedOutTo(s', book2, name)
-        ensures book1 == book2 {
-        assert CheckedOutTo(s, book1, name);
-        assert CheckedOutTo(s, book2, name);
+    match step
+      case CheckOutStep(book, patron) => {
+        assert forall book, name | name != patron
+          :: CheckedOutTo(s, book, name) == CheckedOutTo(s', book, name);
       }
-    }
+      case CheckInStep(book, patron) => {
+        forall book1, book2 |
+          CheckedOutTo(s', book1, name) && CheckedOutTo(s', book2, name)
+          ensures book1 == book2 {
+          assert CheckedOutTo(s, book1, name);
+          assert CheckedOutTo(s, book2, name);
+        }
+      }
   }
 }

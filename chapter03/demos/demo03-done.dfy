@@ -52,9 +52,9 @@ predicate Inv(s: Library) {
 }
 
 lemma SafetyProof()
-  ensures forall s :: Init(s) ==> Inv(s)
-  ensures forall s, s' :: Inv(s) && Next(s, s') ==> Inv(s')
-  ensures forall s :: Inv(s) ==> Safety(s)
+  ensures forall s | Init(s) :: Inv(s)
+  ensures forall s, s' | Inv(s) && Next(s, s') :: Inv(s')
+  ensures forall s | Inv(s) :: Safety(s)
 {
   forall s, s' | Inv(s) && Next(s, s') ensures Inv(s') {
     InductiveStep(s, s');
