@@ -19,7 +19,7 @@ module Crawler {
 
   predicate Next(v:Variables, v':Variables) {
     || MoveNorth(v, v')
-    || MoveSouthEast v')
+    || MoveSouthEast(v, v')
   }
 
   predicate InManhole(v:Variables) {
