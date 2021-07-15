@@ -2,71 +2,71 @@ datatype ServerGrant = Unlocked | Client(id: nat)
 
 datatype ClientRecord = Released | Acquired
 
-datatype State = State(server: ServerGrant, clients: seq<ClientRecord>)
+datatype Variables = Variables(server: ServerGrant, clients: seq<ClientRecord>)
 
-predicate Init(s: State) {
-  && s.server.Unlocked?
-  && forall i | 0 <= i < |s.clients| :: s.clients[i].Released?
+predicate Init(v: Variables) {
+  && v.server.Unlocked?
+  && forall i | 0 <= i < |v.clients| :: v.clients[i].Released?
 }
 
-predicate Acquire(s: State, s':State, id:int) {
-  && 0 <= id < |s.clients|
+predicate Acquire(v: Variables, v':Variables, id:int) {
+  && 0 <= id < |v.clients|
 
   // Enabling condition: The server checks its local state.
-  && s.server.Unlocked?
+  && v.server.Unlocked?
 
   // Update the server state.
-  && s'.server == Client(id)
+  && v'.server == Client(id)
 
   // Update the client that acquired.
-  && |s'.clients| == |s.clients|  // Don't lose track of any clients.
-  && ( forall i | 0 <= i < |s.clients| ::
-      s'.clients[i] == if i == id then Acquired else s.clients[i] )
+  && |v'.clients| == |v.clients|  // Don't lose track of any clients.
+  && ( forall i | 0 <= i < |v.clients| ::
+      v'.clients[i] == if i == id then Acquired else v.clients[i] )
 }
 
-predicate Release(s: State, s':State, id:int) {
-  && 0 <= id < |s.clients|
+predicate Release(v: Variables, v':Variables, id:int) {
+  && 0 <= id < |v.clients|
 
   // Enabling condition: The client trying to release checks its local state.
-  && s.clients[id].Acquired?
+  && v.clients[id].Acquired?
 
   // Update the server state.
-  && s'.server.Unlocked?
+  && v'.server.Unlocked?
 
   // Update the client that released.
-  && |s'.clients| == |s.clients|  // Don't lose track of any clients.
-  && ( forall i | 0 <= i < |s.clients| ::
-      s'.clients[i] == if i == id then Released else s.clients[i] )
+  && |v'.clients| == |v.clients|  // Don't lose track of any clients.
+  && ( forall i | 0 <= i < |v.clients| ::
+      v'.clients[i] == if i == id then Released else v.clients[i] )
 }
 
 datatype Step = AcquireStep(id:int) | ReleaseStep(id:int)
 
-predicate NextStep(s:State, s':State, step:Step) {
+predicate NextStep(v:Variables, v':Variables, step:Step) {
   match step {
-    case AcquireStep(toClient) => Acquire(s, s', toClient)
-    case ReleaseStep(fromClient) => Release(s, s', fromClient)
+    case AcquireStep(toClient) => Acquire(v, v', toClient)
+    case ReleaseStep(fromClient) => Release(v, v', fromClient)
   }
 }
 
-predicate Next(s:State, s':State) {
-  exists step :: NextStep(s, s', step)
+predicate Next(v:Variables, v':Variables) {
+  exists step :: NextStep(v, v', step)
 }
 
-predicate Safety(s:State) {
-  // What's a good definition of safety for the lock server? No two clients
+predicate Safety(v:Variables) {
+  // What'v a good definition of safety for the lock server? No two clients
   // have the lock simultaneously. Write that here.
   false
 }
 
-predicate Inv(s:State) {
+predicate Inv(v:Variables) {
   true  // probably not strong enough. :v)
 }
 
-// Here's your obligation. Probably easiest to break this up into three
+// Here'v your obligation. Probably easiest to break this up into three
 // lemmas, each P==>Q becomes requires P ensures Q.
-lemma SafetyTheorem(s:State, s':State)
-  ensures Init(s) ==> Inv(s)
-  ensures Inv(s) && Next(s, s') ==> Inv(s')
-  ensures Inv(s) ==> Safety(s)
+lemma SafetyTheorem(v:Variables, v':Variables)
+  ensures Init(v) ==> Inv(v)
+  ensures Inv(v) && Next(v, v') ==> Inv(v')
+  ensures Inv(v) ==> Safety(v)
 {
 }

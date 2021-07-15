@@ -2,36 +2,36 @@ module Crawler {
   //datatype Constants = Constants()
   datatype Variables = Variables(x:int, y:int)
 
-  predicate Init(s:Variables) {
-    && s.x == 0
-    && s.y == 5
+  predicate Init(v:Variables) {
+    && v.x == 0
+    && v.y == 5
   }
 
-  predicate MoveNorth(s:Variables, s':Variables) {
-    && s'.x == s.x
-    && s'.y == s.y + 1
+  predicate MoveNorth(v:Variables, v':Variables) {
+    && v'.x == v.x
+    && v'.y == v.y + 1
   }
 
-  predicate MoveSouthEast(s:Variables, s':Variables) {
-    && s'.x == s.x + 1
-    && s'.y == s.y - 1
+  predicate MoveSouthEast(v:Variables, v':Variables) {
+    && v'.x == v.x + 1
+    && v'.y == v.y - 1
   }
 
-  predicate Next(s:Variables, s':Variables) {
-    || MoveNorth(s, s')
-    || MoveSouthEast s')
+  predicate Next(v:Variables, v':Variables) {
+    || MoveNorth(v, v')
+    || MoveSouthEast v')
   }
 
-  predicate InManhole(s:Variables) {
-    s.x*s.x + s.y*s.y <= 3*3
+  predicate InManhole(v:Variables) {
+    v.x*v.x + v.y*v.y <= 3*3
   }
 
   // ...but the invariant doesn't need to be this strong!
-  predicate ReachabilityProperty(s:Variables) {
-    s.x >= 0 && s.y >= 5-s.x
+  predicate ReachabilityProperty(v:Variables) {
+    v.x >= 0 && v.y >= 5-v.x
   }
 
-  predicate Safety(s:Variables) {
-    !InManhole(s)
+  predicate Safety(v:Variables) {
+    !InManhole(v)
   }
 }

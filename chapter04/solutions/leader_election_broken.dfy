@@ -1,4 +1,4 @@
-// Each node's identifier (address)
+// Each node'v identifier (address)
 datatype RawConstants = RawConstants(ids: seq<nat>) {
   predicate ValidIdx(i: nat) {
     0<=i<|ids|
@@ -27,12 +27,12 @@ datatype Variables = Variables(highest_heard: seq<nat>) {
 }
 // type Variables = rv:RawVariables | rv.WF(k) // can't do this because k isn't constant (ha ha)
 
-predicate Init(k: Constants, s: Variables)
+predicate Init(k: Constants, v: Variables)
 {
   && k.WF()
-  && s.WF(k)
+  && v.WF(k)
     // Everyone begins having heard about nobody, not even themselves.
-  && (forall i | k.ValidIdx(i) :: s.highest_heard[i] == -1)
+  && (forall i | k.ValidIdx(i) :: v.highest_heard[i] == -1)
 }
 
 function max(a: nat, b: nat) : nat {
@@ -46,56 +46,56 @@ function NextIdx(k: Constants, idx: nat) : nat
   if idx + 1 < |k.ids| then idx + 1 else 0
 }
 
-predicate Transmission(k: Constants, s: Variables, s': Variables, src: nat)
+predicate Transmission(k: Constants, v: Variables, v': Variables, src: nat)
 {
   && k.WF()
-  && s.WF(k)
-  && s'.WF(k)
+  && v.WF(k)
+  && v'.WF(k)
   && 0 <= src < |k.ids|
 
   // Neighbor address in ring.
-  // TODO let's try it with modulo, too.
+  // TODO let'v try it with modulo, too.
   && var dst := NextIdx(k, src);
   // Yeah turns out modulo makes dafny stupid.
   // && var dst := (src + 1) % |k.ids|;
 
   // src sends the max of its highest_heard value and its own id.
-  && var message := max(s.highest_heard[src], k.ids[src]);
-  && var dst_new_max := max(s.highest_heard[dst], message);
-  // Here's bug 1: we compute the max of the message with the highest_heard of dst,
+  && var message := max(v.highest_heard[src], k.ids[src]);
+  && var dst_new_max := max(v.highest_heard[dst], message);
+  // Here'v bug 1: we compute the max of the message with the highest_heard of dst,
   // and then ignore it.
 
-  && s' == s.(highest_heard := s.highest_heard[dst := dst_new_max])
+  && v' == v.(highest_heard := v.highest_heard[dst := dst_new_max])
 }
 
 datatype Step = TransmissionStep(src: nat)
 
-predicate NextStep(k: Constants, s: Variables, s': Variables, step: Step)
+predicate NextStep(k: Constants, v: Variables, v': Variables, step: Step)
 {
   match step {
-    case TransmissionStep(src) => Transmission(k, s, s', src)
+    case TransmissionStep(src) => Transmission(k, v, v', src)
   }
 }
 
-predicate Next(k: Constants, s: Variables, s': Variables)
+predicate Next(k: Constants, v: Variables, v': Variables)
 {
-  exists step :: NextStep(k, s, s', step)
+  exists step :: NextStep(k, v, v', step)
 }
 
-predicate IsLeader(k: Constants, s: Variables, i: nat)
+predicate IsLeader(k: Constants, v: Variables, i: nat)
   requires k.WF()
-  requires s.WF(k)
+  requires v.WF(k)
 {
   && ValidIdx(k, i)
-  && s.highest_heard[i] == k.ids[i]
+  && v.highest_heard[i] == k.ids[i]
 }
 
 // TODO note that the elected leader isn't stable, which isn't ideal.
-predicate Safety(k: Constants, s: Variables)
+predicate Safety(k: Constants, v: Variables)
   requires k.WF()
-  requires s.WF(k)
+  requires v.WF(k)
 {
-  forall i, j | IsLeader(k, s, i) && IsLeader(k, s, j) :: i == j
+  forall i, j | IsLeader(k, v, i) && IsLeader(k, v, j) :: i == j
 }
 
 predicate IsMaxId(k: Constants, i: nat)
@@ -118,37 +118,37 @@ predicate Between(k: Constants, startExclusive: nat, idx: nat, endExclusive: nat
 
 // An identifier that has "reached" a distant node some way around the
 // ring is at least as high as the id of every node it has passed.
-predicate IDOnChordDominatesIDs(k: Constants, s: Variables)
+predicate IDOnChordDominatesIDs(k: Constants, v: Variables)
   requires k.WF()
-  requires s.WF(k)
+  requires v.WF(k)
 {
-  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == s.highest_heard[j] ::
+  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == v.highest_heard[j] ::
     forall m | ValidIdx(k, m) && Between(k, i, m, j) :: k.ids[i] > k.ids[m]
 }
 
-predicate Inv(k: Constants, s: Variables)
+predicate Inv(k: Constants, v: Variables)
 {
   && k.WF()
-  && s.WF(k)
-  && Safety(k, s)
-  && IDOnChordDominatesIDs(k, s)
+  && v.WF(k)
+  && Safety(k, v)
+  && IDOnChordDominatesIDs(k, v)
 }
 
-lemma InitImpliesInv(k: Constants, s: Variables)
-  requires Init(k, s)
-  ensures Inv(k, s)
+lemma InitImpliesInv(k: Constants, v: Variables)
+  requires Init(k, v)
+  ensures Inv(k, v)
 {
 }
 
-lemma NextPreservesInv(k: Constants, s: Variables, s': Variables)
-  requires Inv(k, s)
-  requires Next(k, s, s')
-  ensures Inv(k, s')
+lemma NextPreservesInv(k: Constants, v: Variables, v': Variables)
+  requires Inv(k, v)
+  requires Next(k, v, v')
+  ensures Inv(k, v')
 {
 }
 
-lemma InvImpliesSafety(k: Constants, s: Variables)
-  requires Inv(k, s)
-  ensures Safety(k, s)
+lemma InvImpliesSafety(k: Constants, v: Variables)
+  requires Inv(k, v)
+  ensures Safety(k, v)
 {
 }
