@@ -8,30 +8,30 @@
 include "protocol.i.dfy"
 
 // Before we get here, caller must define a type Message that we'll
-// use to instantiate network.s.dfy.
+// use to instantiate network.v.dfy.
 
 datatype DistState = DistState(
   hosts:map<HostId, HostState>, network:NetState<Message>)
 
-predicate WFState(s:DistState) {
+predicate WFState(v:DistState) {
   // We don't lose track of any of the hosts.
-  && s.hosts.Keys == AllHosts()
+  && v.hosts.Keys == AllHosts()
 }
 
-predicate DistInit(s:DistState) {
-  && WFState(s)
-  && (forall id :: HostInit(s.hosts[id], id))
-  && NetInit(s.network)
+predicate DistInit(v:DistState) {
+  && WFState(v)
+  && (forall id :: HostInit(v.hosts[id], id))
+  && NetInit(v.network)
 }
 
-predicate NextStep(s:DistState, s':DistState, id:HostId, a:NetAction<Message>) {
-  && WFState(s)
-  && WFState(s')
-  && HostNext(id, s.hosts[id], s'.hosts[id], a)
-  && (forall other :: other != id ==> s'.hosts[other] == s.hosts[other])
-  && NetNext(s.network, s'.network, a)
+predicate NextStep(v:DistState, v':DistState, id:HostId, a:NetAction<Message>) {
+  && WFState(v)
+  && WFState(v')
+  && HostNext(id, v.hosts[id], v'.hosts[id], a)
+  && (forall other :: other != id ==> v'.hosts[other] == v.hosts[other])
+  && NetNext(v.network, v'.network, a)
 }
 
-predicate DistNext(s:DistState, s':DistState) {
-  exists id, a :: NextStep(s, s', id, a)
+predicate DistNext(v:DistState, v':DistState) {
+  exists id, a :: NextStep(v, v', id, a)
 }

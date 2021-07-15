@@ -8,85 +8,85 @@
 //increasing epoch number with the lock. Initially, node 0 holds the lock and
 //its epoch number is 1. A node that holds the lock can “grant” it to another
 //node by sending them a “Grant” message which has an epoch number that is
-//greater than the node’s epoch number. A node that receives such a message
-//will become the new holder and will set its epoch number to the message’s
+//greater than the node's epoch number. A node that receives such a message
+//will become the new holder and will set its epoch number to the message’v
 //epoch number.  
 
 include "distributed_system.s.dfy"
 
-predicate Safety(s:DistState) {
-  && WFState(s)
-  && forall i, j :: s.hosts[i].holdsLock && s.hosts[j].holdsLock ==> i == j
+predicate Safety(v:DistState) {
+  && WFState(v)
+  && forall i, j :: v.hosts[i].holdsLock && v.hosts[j].holdsLock ==> i == j
 }
 
-predicate InFlight(s:DistState, message:Message) {
-  && WFState(s)
-  && message in s.network.messageSet
-  && message.epoch > s.hosts[message.dest].epoch
+predicate InFlight(v:DistState, message:Message) {
+  && WFState(v)
+  && message in v.network.messagesEverSent
+  && message.epoch > v.hosts[message.dest].epoch
 }
 
-predicate UniqueMessageInFlight(s:DistState) {
-  forall m1, m2 :: InFlight(s, m1) && InFlight(s, m2) ==> m1 == m2
+predicate UniqueMessageInFlight(v:DistState) {
+  forall m1, m2 :: InFlight(v, m1) && InFlight(v, m2) ==> m1 == m2
 }
 
-predicate InFlightPrecludesLockHeld(s:DistState) {
-  forall m :: InFlight(s, m) ==> (forall id :: !s.hosts[id].holdsLock)
+predicate InFlightPrecludesLockHeld(v:DistState) {
+  forall m :: InFlight(v, m) ==> (forall id :: !v.hosts[id].holdsLock)
 }
 
-predicate InFlightHasFreshestEpoch(s:DistState) {
-  forall m :: InFlight(s, m) ==> (forall id :: s.hosts[id].epoch < m.epoch)
+predicate InFlightHasFreshestEpoch(v:DistState) {
+  forall m :: InFlight(v, m) ==> (forall id :: v.hosts[id].epoch < m.epoch)
 }
 
-predicate LockHolderPrecludesInFlight(s:DistState)
-  requires WFState(s)
+predicate LockHolderPrecludesInFlight(v:DistState)
+  requires WFState(v)
 {
-  forall id :: s.hosts[id].holdsLock ==> (forall m :: !InFlight(s, m))
+  forall id :: v.hosts[id].holdsLock ==> (forall m :: !InFlight(v, m))
 }
 
-predicate LockHolderHasFreshestEpoch(s:DistState)
-  requires WFState(s)
+predicate LockHolderHasFreshestEpoch(v:DistState)
+  requires WFState(v)
 {
-  forall id :: s.hosts[id].holdsLock ==>
-    (forall oid :: oid!=id ==> s.hosts[oid].epoch < s.hosts[id].epoch)
+  forall id :: v.hosts[id].holdsLock ==>
+    (forall oid :: oid!=id ==> v.hosts[oid].epoch < v.hosts[id].epoch)
 }
 
-predicate Inv(s:DistState) {
-  && WFState(s)
+predicate Inv(v:DistState) {
+  && WFState(v)
 
   // There are never two messages in flight.
-  && UniqueMessageInFlight(s)
+  && UniqueMessageInFlight(v)
 
   // If a message is flight, no client holds the lock, and
   // the message has the freshest epoch number.
-  && InFlightPrecludesLockHeld(s)
-  && InFlightHasFreshestEpoch(s)
+  && InFlightPrecludesLockHeld(v)
+  && InFlightHasFreshestEpoch(v)
 
   // If a clent holds the lock, no message is in flight, and
   // the client has the freshest epoch number.
-  && LockHolderPrecludesInFlight(s)
-  && LockHolderHasFreshestEpoch(s)
+  && LockHolderPrecludesInFlight(v)
+  && LockHolderHasFreshestEpoch(v)
 
-  && Safety(s)
+  && Safety(v)
 }
 
 lemma SafetyProof()
-  ensures forall s :: DistInit(s) ==> Inv(s)
-  ensures forall s, s' :: Inv(s) && DistNext(s, s') ==> Inv(s')
-  ensures forall s :: Inv(s) ==> Safety(s)
+  ensures forall v :: DistInit(v) ==> Inv(v)
+  ensures forall v, v' :: Inv(v) && DistNext(v, v') ==> Inv(v')
+  ensures forall v :: Inv(v) ==> Safety(v)
 {
-  forall s, s' | Inv(s) && DistNext(s, s') ensures Inv(s') {
-    var id, a :| NextStep(s, s', id, a);
-    if DoAccept(id, s.hosts[id], s'.hosts[id], a) {
-      assert UniqueMessageInFlight(s);  // observe
-      assert forall m | InFlight(s', m) :: InFlight(s, m);  // observe
-      forall m ensures !InFlight(s', m) {
-        assert InFlight(s, a.rcv.value);  // observe
-        assert !InFlight(s', a.rcv.value);  // observe
+  forall v, v' | Inv(v) && DistNext(v, v') ensures Inv(v') {
+    var id, a :| NextStep(v, v', id, a);
+    if DoAccept(id, v.hosts[id], v'.hosts[id], a) {
+      assert UniqueMessageInFlight(v);  // observe
+      assert forall m | InFlight(v', m) :: InFlight(v, m);  // observe
+      forall m ensures !InFlight(v', m) {
+        assert InFlight(v, a.rcv.value);  // observe
+        assert !InFlight(v', a.rcv.value);  // observe
       }
-      assert Inv(s'); // observe
+      assert Inv(v'); // observe
     } else {
-      var recipient :| DoGrant(s.hosts[id], s'.hosts[id], a, recipient); // observe
-      assert Inv(s'); // observe
+      var recipient :| DoGrant(v.hosts[id], v'.hosts[id], a, recipient); // observe
+      assert Inv(v'); // observe
     }
   }
 }
