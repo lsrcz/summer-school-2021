@@ -21,12 +21,12 @@ include "distributed_system.s.dfy"
 
 // Replace 'false' with an appropriate safety condition: no two clients hold
 // the lock simulatneously.
-predicate Safety(v:DistState) {
+predicate Safety(v:DistVars) {
   false
 }
 
 // Replace 'true' with an invariant that's induction and supports Safety.
-predicate Inv(v:DistState) {
+predicate Inv(v:DistVars) {
   true
 }
 

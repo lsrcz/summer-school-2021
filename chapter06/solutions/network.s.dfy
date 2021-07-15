@@ -40,13 +40,13 @@ datatype Option<V> = None | Some(value:V)
 datatype NetAction<M> = NetAction(rcv:Option<M>, send:set<M>)
 
 // Once a host has sent a message, messagesEverSent
-datatype NetState<M> = NetState(messagesEverSent:set<M>)
+datatype NetVars<M> = NetVars(messagesEverSent:set<M>)
 
-predicate NetInit(v:NetState) {
+predicate NetInit(v:NetVars) {
   v.messagesEverSent == {}
 }
 
-predicate NetNext(v:NetState, v':NetState, a:NetAction) {
+predicate NetNext(v:NetVars, v':NetVars, a:NetAction) {
   && (a.rcv.Some? ==> a.rcv.value in v.messagesEverSent)
   && v'.messagesEverSent == v.messagesEverSent + a.send
   // A fancier network might constrain hosts to only send messages with correct

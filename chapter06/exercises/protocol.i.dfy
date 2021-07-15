@@ -6,9 +6,9 @@ include "network.s.dfy"
 datatype Message = Message(/* FILL ME IN! */)
 
 // Define your Host protocol state machine here.
-datatype HostState = HostState(/* FILL ME IN! */)
+datatype HostVars = HostVars(/* FILL ME IN! */)
 
-predicate HostInit(v:HostState, id:HostId) {
+predicate HostInit(v:HostVars, id:HostId) {
   true
 }
 
@@ -16,6 +16,6 @@ predicate HostInit(v:HostState, id:HostId) {
 // so the host can tell which messages are addressed to it. In a real system,
 // that id would be a constant part of the hosts' state; here we're trying
 // to keep the boilerplate to a minimum.
-predicate HostNext(id:HostId, v:HostState, v':HostState, a:NetAction<Message>) {
+predicate HostNext(id:HostId, v:HostVars, v':HostVars, a:NetAction<Message>) {
   true
 }

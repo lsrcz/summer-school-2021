@@ -6,14 +6,14 @@ include "network.s.dfy"
 datatype Message = Grant(dest:HostId, epoch:nat)
 
 // Define your Host protocol state machine here.
-datatype HostState = HostState(holdsLock:bool, epoch:nat)
+datatype HostVars = HostVars(holdsLock:bool, epoch:nat)
 
-predicate HostInit(v:HostState, id:HostId) {
+predicate HostInit(v:HostVars, id:HostId) {
   && v.holdsLock == (id == 0)
   && v.epoch == if id == 0 then 1 else 0
 }
 
-predicate DoGrant(v:HostState, v':HostState, a:NetAction<Message>, recipient:HostId) {
+predicate DoGrant(v:HostVars, v':HostVars, a:NetAction<Message>, recipient:HostId) {
   && v.holdsLock == true
   && a.rcv.None?
   && a.send == {Grant(recipient, v.epoch + 1)}
@@ -21,7 +21,7 @@ predicate DoGrant(v:HostState, v':HostState, a:NetAction<Message>, recipient:Hos
   && v'.epoch == v.epoch
 }
 
-predicate DoAccept(id:HostId, v:HostState, v':HostState, a:NetAction<Message>) {
+predicate DoAccept(id:HostId, v:HostVars, v':HostVars, a:NetAction<Message>) {
   && a.rcv.Some?
   && a.rcv.value.dest == id
   && a.rcv.value.epoch > v.epoch
@@ -34,7 +34,7 @@ predicate DoAccept(id:HostId, v:HostState, v':HostState, a:NetAction<Message>) {
 // so the host can tell which messages are addressed to it. In a real system,
 // that id would be a constant part of the hosts' state; here we're trying
 // to keep the boilerplate to a minimum.
-predicate HostNext(id:HostId, v:HostState, v':HostState, a:NetAction<Message>) {
+predicate HostNext(id:HostId, v:HostVars, v':HostVars, a:NetAction<Message>) {
   || (exists recipient :: DoGrant(v, v', a, recipient) )
   || DoAccept(id, v, v', a)
 }

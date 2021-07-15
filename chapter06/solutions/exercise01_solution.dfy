@@ -14,44 +14,44 @@
 
 include "distributed_system.s.dfy"
 
-predicate Safety(v:DistState) {
-  && WFState(v)
+predicate Safety(v:DistVars) {
+  && WFVars(v)
   && forall i, j :: v.hosts[i].holdsLock && v.hosts[j].holdsLock ==> i == j
 }
 
-predicate InFlight(v:DistState, message:Message) {
-  && WFState(v)
+predicate InFlight(v:DistVars, message:Message) {
+  && WFVars(v)
   && message in v.network.messagesEverSent
   && message.epoch > v.hosts[message.dest].epoch
 }
 
-predicate UniqueMessageInFlight(v:DistState) {
+predicate UniqueMessageInFlight(v:DistVars) {
   forall m1, m2 :: InFlight(v, m1) && InFlight(v, m2) ==> m1 == m2
 }
 
-predicate InFlightPrecludesLockHeld(v:DistState) {
+predicate InFlightPrecludesLockHeld(v:DistVars) {
   forall m :: InFlight(v, m) ==> (forall id :: !v.hosts[id].holdsLock)
 }
 
-predicate InFlightHasFreshestEpoch(v:DistState) {
+predicate InFlightHasFreshestEpoch(v:DistVars) {
   forall m :: InFlight(v, m) ==> (forall id :: v.hosts[id].epoch < m.epoch)
 }
 
-predicate LockHolderPrecludesInFlight(v:DistState)
-  requires WFState(v)
+predicate LockHolderPrecludesInFlight(v:DistVars)
+  requires WFVars(v)
 {
   forall id :: v.hosts[id].holdsLock ==> (forall m :: !InFlight(v, m))
 }
 
-predicate LockHolderHasFreshestEpoch(v:DistState)
-  requires WFState(v)
+predicate LockHolderHasFreshestEpoch(v:DistVars)
+  requires WFVars(v)
 {
   forall id :: v.hosts[id].holdsLock ==>
     (forall oid :: oid!=id ==> v.hosts[oid].epoch < v.hosts[id].epoch)
 }
 
-predicate Inv(v:DistState) {
-  && WFState(v)
+predicate Inv(v:DistVars) {
+  && WFVars(v)
 
   // There are never two messages in flight.
   && UniqueMessageInFlight(v)
