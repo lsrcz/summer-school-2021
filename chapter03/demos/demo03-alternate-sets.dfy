@@ -60,7 +60,7 @@ predicate HasAtMostOneBook(v: Library, name: string) {
 }
 
 // ...But reasoning about set cardinality is a bit more annoying in
-// Dafny. Dafny'v pretty darn good with quantifiers, but has a harder
+// Dafny. Dafny's pretty darn good with quantifiers, but has a harder
 // time with set cardinality rules (details on why on Friday, at the
 // end of the course). So the way I chose to prove this version was
 // to show that the two definitions are equivalent...

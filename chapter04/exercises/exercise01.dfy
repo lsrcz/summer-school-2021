@@ -34,7 +34,7 @@ module Crawler {
     true  // probably not strong enough. :v)
   }
 
-  // Here'v your obligation. Probably easiest to break this up into three
+  // Here's your obligation. Probably easiest to break this up into three
   // lemmas, each P==>Q becomes requires P ensures Q.
   lemma SafetyTheorem(v:Variables, v':Variables)
     ensures Init(v) ==> Inv(v)

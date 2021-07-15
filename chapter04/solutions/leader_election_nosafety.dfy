@@ -1,4 +1,4 @@
-// Each node'v identifier (address)
+// Each node's identifier (address)
 datatype Constants = Constants(ids: seq<nat>)
 
 // The highest other identifier this node has heard about.

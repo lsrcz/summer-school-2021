@@ -53,7 +53,7 @@ predicate Next(v:Variables, v':Variables) {
 }
 
 predicate Safety(v:Variables) {
-  // What'v a good definition of safety for the lock server? No two clients
+  // What's a good definition of safety for the lock server? No two clients
   // have the lock simultaneously. Write that here.
   forall i,j ::
     (&& 0 <= i < |v.clients|
@@ -74,7 +74,7 @@ predicate Inv(v:Variables) {
   && ServerAgreesClients(v)
 }
 
-// Here'v your obligation. Probably easiest to break this up into three
+// Here's your obligation. Probably easiest to break this up into three
 // lemmas, each P==>Q becomes requires P ensures Q.
 lemma SafetyTheorem(v:Variables, v':Variables)
   ensures Init(v) ==> Inv(v)

@@ -1,4 +1,4 @@
-// Each node'v identifier (address)
+// Each node's identifier (address)
 datatype RawConstants = RawConstants(ids: seq<nat>) {
   predicate ValidIdx(i: nat) {
     0<=i<|ids|
@@ -54,7 +54,7 @@ predicate Transmission(k: Constants, v: Variables, v': Variables, src: nat)
   && 0 <= src < |k.ids|
 
   // Neighbor address in ring.
-  // TODO let'v try it with modulo, too.
+  // TODO let's try it with modulo, too.
   && var dst := NextIdx(k, src);
   // Yeah turns out modulo makes dafny stupid.
   // && var dst := (src + 1) % |k.ids|;
@@ -62,7 +62,7 @@ predicate Transmission(k: Constants, v: Variables, v': Variables, src: nat)
   // src sends the max of its highest_heard value and its own id.
   && var message := max(v.highest_heard[src], k.ids[src]);
   && var dst_new_max := max(v.highest_heard[dst], message);
-  // Here'v bug 1: we compute the max of the message with the highest_heard of dst,
+  // Here's bug 1: we compute the max of the message with the highest_heard of dst,
   // and then ignore it.
 
   && v' == v.(highest_heard := v.highest_heard[dst := dst_new_max])

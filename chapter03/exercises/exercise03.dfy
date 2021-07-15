@@ -4,7 +4,7 @@
 Model a lock service that consists of a single server and an
 arbitrary number of clients.
 
-The state of the system includes the server'v state (whether the server
+The state of the system includes the server's state (whether the server
 knows that some client holds the lock, and if so which one)
 and the clients' states (for each client, whether that client knows
 it holds the lock).
