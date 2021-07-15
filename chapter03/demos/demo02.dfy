@@ -2,20 +2,20 @@
 //#instructor which also introduces step parameters and the corresponding
 //#instructor existentials in the Next() predicate.
 
-datatype State = State(tokens:int)
+datatype Variables = Variables(tokens:int)
 
-predicate Init(s:State) {
-    s.tokens > 0
+predicate Init(v:Variables) {
+    v.tokens > 0
 }
 
 // Action with parameters
-predicate Play(s:State, s':State, take:int) {
+predicate Play(v:Variables, v':Variables, take:int) {
     && 1 <= take <= 4   // Enabling condition
-    && take <= s.tokens // Enabling condition
-    && s'.tokens == s.tokens - take
+    && take <= v.tokens // Enabling condition
+    && v'.tokens == v.tokens - take
 }
 
-predicate Next(s:State, s':State)
+predicate Next(v:Variables, v':Variables)
 {
-    exists take :: Play(s, s', take)    // parameters get there-existed in Next
+    exists take :: Play(v, v', take)    // parameters get there-existed in Next
 }

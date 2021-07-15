@@ -2,39 +2,40 @@ datatype Card = Shelf | Patron(name: string)
 datatype Book = Book(title: string)
 type Library = map<Book, Card>
 
-predicate Init(s: Library) {
-  forall book | book in s :: s[book] == Shelf
+predicate Init(v: Library) {
+  forall book | book in v :: v[book] == Shelf
 }
 
-predicate CheckOut(s:Library, s':Library, book:Book, patron:string) {
-  && book in s
-  && s[book] == Shelf
-  && (forall book | book in s :: s[book] != Patron(patron))
-  && s' == s[book := Patron(patron)]
+predicate CheckOut(v:Library, v':Library, book:Book, patron:string) {
+  && book in v
+  && v[book] == Shelf
+  && (forall book | book in v :: v[book] != Patron(patron))
+  && v' == v[book := Patron(patron)]
 }
 
-predicate CheckIn(s:Library, s':Library, book:Book, patron:string) {
-  && book in s
-  && s[book] == Patron(patron)
-  && s' == s[book := Shelf]
+predicate CheckIn(v:Library, v':Library, book:Book, patron:string) {
+  && book in v
+  && v[book] == Patron(patron)
+  && v' == v[book := Shelf]
 }
 
-predicate Next(s:Library, s':Library) {
-  || (exists book, patron :: CheckOut(s, s', book, patron))
-  || (exists book, patron :: CheckIn(s, s', book, patron))
+predicate Next(v:Library, v':Library) {
+  || (exists book, patron :: CheckOut(v, v', book, patron))
+  || (exists book, patron :: CheckIn(v, v', book, patron))
 }
 
 
-predicate Safety(s:Library) {
+predicate Safety(v:Library) {
+  false  // placeholder
 }
 
-predicate Inv(s: Library) {
-  Safety(s)
+predicate Inv(v: Library) {
+  Safety(v)
 }
 
 lemma SafetyProof()
-  ensures forall s | Init(s) :: Inv(s)
-  ensures forall s, s' | Inv(s) && Next(s, s') :: Inv(s')
-  ensures forall s | Inv(s) :: Safety(s)
+  ensures forall v | Init(v) :: Inv(v)
+  ensures forall v, v' | Inv(v) && Next(v, v') :: Inv(v')
+  ensures forall v | Inv(v) :: Safety(v)
 {
 }

@@ -1,0 +1,7 @@
+Here's a reasonable state machine type definition. The server knows the lock is
+unlocked, or knows which client has it. Each client either thinks they have or
+haven't acquired the lock.
+
+datatype ServerGrant = Unlocked | Client(id: nat)
+datatype ClientRecord = Released | Acquired
+datatype Variables = Variables(server: ServerGrant, clients: seq<ClientRecord>)

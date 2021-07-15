@@ -2,35 +2,35 @@ datatype Card = Shelf | Patron(name: string)
 datatype Book = Book(title: string)
 type Library = map<Book, Card>
 
-predicate Init(s: Library) {
-  forall book | book in s :: s[book] == Shelf
+predicate Init(v: Library) {
+  forall book | book in v :: v[book] == Shelf
 }
 
-predicate CheckOut(s:Library, s':Library, book:Book, patron:string) {
-  && book in s
-  && s[book] == Shelf
-  && (forall book | book in s :: s[book] != Patron(patron))
-  && s' == s[book := Patron(patron)]
+predicate CheckOut(v:Library, v':Library, book:Book, patron:string) {
+  && book in v
+  && v[book] == Shelf
+  && (forall book | book in v :: v[book] != Patron(patron))
+  && v' == v[book := Patron(patron)]
 }
 
-predicate CheckIn(s:Library, s':Library, book:Book, patron:string) {
-  && book in s
-  && s[book] == Patron(patron)
-  && s' == s[book := Shelf]
+predicate CheckIn(v:Library, v':Library, book:Book, patron:string) {
+  && book in v
+  && v[book] == Patron(patron)
+  && v' == v[book := Shelf]
 }
 
 datatype Step = 
     | CheckOutStep(book:Book, patron:string) 
     | CheckInStep(book:Book, patron:string)
     
-predicate NextStep(s:Library, s':Library, step:Step) {
+predicate NextStep(v:Library, v':Library, step:Step) {
   match step
-    case CheckOutStep(book,patron) => CheckOut(s, s', book, patron)
-    case CheckInStep(book,patron) => CheckIn(s, s', book, patron)
+    case CheckOutStep(book,patron) => CheckOut(v, v', book, patron)
+    case CheckInStep(book,patron) => CheckIn(v, v', book, patron)
 }
 
-predicate Next(s:Library, s':Library) {
-    exists step:Step :: NextStep(s, s', step)
+predicate Next(v:Library, v':Library) {
+    exists step:Step :: NextStep(v, v', step)
 }
 
 
@@ -39,57 +39,57 @@ predicate Next(s:Library, s':Library) {
 //
 // If you're coming from TLA+ background, you might have written
 // this using set cardinality:
-//   |BooksOutstanding(s, name)| <= 1
+//   |BooksOutstanding(v, name)| <= 1
 // For a solution like that, see demo00_alternate.dfy.
-predicate CheckedOutTo(s:Library, book:Book, name: string) {
-  && book in s
-  && s[book] == Patron(name)
+predicate CheckedOutTo(v:Library, book:Book, name: string) {
+  && book in v
+  && v[book] == Patron(name)
 }
 
-predicate HasAtMostOneBook(s: Library, name: string) {
+predicate HasAtMostOneBook(v: Library, name: string) {
   forall book1, book2 ::
-    ( CheckedOutTo(s, book1, name) && CheckedOutTo(s, book2, name)
+    ( CheckedOutTo(v, book1, name) && CheckedOutTo(v, book2, name)
       ==> book1 == book2 )
 }
 
-predicate Safety(s:Library) {
-  forall name :: HasAtMostOneBook(s, name)
+predicate Safety(v:Library) {
+  forall name :: HasAtMostOneBook(v, name)
 }
 
-predicate Inv(s: Library) {
-  Safety(s)
+predicate Inv(v: Library) {
+  Safety(v)
 }
 
 lemma SafetyProof()
-  ensures forall s | Init(s) :: Inv(s)
-  ensures forall s, s' | Inv(s) && Next(s, s') :: Inv(s')
-  ensures forall s | Inv(s) :: Safety(s)
+  ensures forall v | Init(v) :: Inv(v)
+  ensures forall v, v' | Inv(v) && Next(v, v') :: Inv(v')
+  ensures forall v | Inv(v) :: Safety(v)
 {
-  forall s, s' | Inv(s) && Next(s, s') ensures Inv(s') {
-    InductiveStep(s, s');
+  forall v, v' | Inv(v) && Next(v, v') ensures Inv(v') {
+    InductiveStep(v, v');
   }
 }
 
 
-lemma InductiveStep(s: Library, s': Library)
-  requires Inv(s)
-  requires Next(s, s')
-  ensures Inv(s')
+lemma InductiveStep(v: Library, v': Library)
+  requires Inv(v)
+  requires Next(v, v')
+  ensures Inv(v')
 {
-  var step :| NextStep(s, s', step);
-  forall name ensures HasAtMostOneBook(s', name) {
-    assert HasAtMostOneBook(s, name);
+  var step :| NextStep(v, v', step);
+  forall name ensures HasAtMostOneBook(v', name) {
+    assert HasAtMostOneBook(v, name);
     match step
       case CheckOutStep(book, patron) => {
         assert forall book, name | name != patron
-          :: CheckedOutTo(s, book, name) == CheckedOutTo(s', book, name);
+          :: CheckedOutTo(v, book, name) == CheckedOutTo(v', book, name);
       }
       case CheckInStep(book, patron) => {
         forall book1, book2 |
-          CheckedOutTo(s', book1, name) && CheckedOutTo(s', book2, name)
+          CheckedOutTo(v', book1, name) && CheckedOutTo(v', book2, name)
           ensures book1 == book2 {
-          assert CheckedOutTo(s, book1, name);
-          assert CheckedOutTo(s, book2, name);
+          assert CheckedOutTo(v, book1, name);
+          assert CheckedOutTo(v, book2, name);
         }
       }
   }

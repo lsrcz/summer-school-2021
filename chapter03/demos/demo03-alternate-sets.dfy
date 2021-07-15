@@ -2,86 +2,86 @@ datatype Card = Shelf | Patron(name: string)
 datatype Book = Book(title: string)
 type Library = map<Book, Card>
 
-predicate Init(s: Library) {
-  forall book | book in s :: s[book] == Shelf
+predicate Init(v: Library) {
+  forall book | book in v :: v[book] == Shelf
 }
 
-predicate CheckOut(s:Library, s':Library, book:Book, patron:string) {
-  && book in s
-  && s[book] == Shelf
-  && (forall book | book in s :: s[book] != Patron(patron))
-  && s' == s[book := Patron(patron)]
+predicate CheckOut(v:Library, v':Library, book:Book, patron:string) {
+  && book in v
+  && v[book] == Shelf
+  && (forall book | book in v :: v[book] != Patron(patron))
+  && v' == v[book := Patron(patron)]
 }
 
-predicate CheckIn(s:Library, s':Library, book:Book, patron:string) {
-  && book in s
-  && s[book] == Patron(patron)
-  && s' == s[book := Shelf]
+predicate CheckIn(v:Library, v':Library, book:Book, patron:string) {
+  && book in v
+  && v[book] == Patron(patron)
+  && v' == v[book := Shelf]
 }
 
-predicate Next(s:Library, s':Library) {
-  || (exists book, patron :: CheckOut(s, s', book, patron))
-  || (exists book, patron :: CheckIn(s, s', book, patron))
+predicate Next(v:Library, v':Library) {
+  || (exists book, patron :: CheckOut(v, v', book, patron))
+  || (exists book, patron :: CheckIn(v, v', book, patron))
 }
 
-predicate CheckedOutTo(s:Library, book:Book, name: string) {
-  && book in s
-  && s[book] == Patron(name)
+predicate CheckedOutTo(v:Library, book:Book, name: string) {
+  && book in v
+  && v[book] == Patron(name)
 }
 
-function BooksOutstanding(s:Library, name: string) : set<Book> {
-  set book: Book | book in s && CheckedOutTo(s, book, name)
+function BooksOutstanding(v:Library, name: string) : set<Book> {
+  set book: Book | book in v && CheckedOutTo(v, book, name)
 }
 
 // This alternate variant uses set-cardinality as the definition
 // of the safety property.
-predicate Safety(s:Library) {
-  forall name :: |BooksOutstanding(s, name)| <= 1
+predicate Safety(v:Library) {
+  forall name :: |BooksOutstanding(v, name)| <= 1
 }
 
-predicate Inv(s: Library) {
-  Safety(s)
+predicate Inv(v: Library) {
+  Safety(v)
 }
 
 lemma SafetyProof()
-  ensures forall s :: Init(s) ==> Inv(s)
-  ensures forall s, s' :: Inv(s) && Next(s, s') ==> Inv(s')
-  ensures forall s :: Inv(s) ==> Safety(s)
+  ensures forall v :: Init(v) ==> Inv(v)
+  ensures forall v, v' :: Inv(v) && Next(v, v') ==> Inv(v')
+  ensures forall v :: Inv(v) ==> Safety(v)
 {
-  forall s, s' | Inv(s) && Next(s, s') ensures Inv(s') {
-    InductiveStep(s, s');
+  forall v, v' | Inv(v) && Next(v, v') ensures Inv(v') {
+    InductiveStep(v, v');
   }
 }
 
-predicate HasAtMostOneBook(s: Library, name: string) {
+predicate HasAtMostOneBook(v: Library, name: string) {
   forall book1, book2 ::
-    ( CheckedOutTo(s, book1, name) && CheckedOutTo(s, book2, name)
+    ( CheckedOutTo(v, book1, name) && CheckedOutTo(v, book2, name)
       ==> book1 == book2 )
 }
 
 // ...But reasoning about set cardinality is a bit more annoying in
-// Dafny. Dafny's pretty darn good with quantifiers, but has a harder
+// Dafny. Dafny'v pretty darn good with quantifiers, but has a harder
 // time with set cardinality rules (details on why on Friday, at the
 // end of the course). So the way I chose to prove this version was
 // to show that the two definitions are equivalent...
-lemma SafetySynonyms(s: Library, name: string)
-  ensures (|BooksOutstanding(s, name)| <= 1) <==> HasAtMostOneBook(s, name)
+lemma SafetySynonyms(v: Library, name: string)
+  ensures (|BooksOutstanding(v, name)| <= 1) <==> HasAtMostOneBook(v, name)
 {
-  if |BooksOutstanding(s, name)| <= 1 {
+  if |BooksOutstanding(v, name)| <= 1 {
     if book1, book2 :|
-      CheckedOutTo(s, book1, name) && CheckedOutTo(s, book2, name)
+      CheckedOutTo(v, book1, name) && CheckedOutTo(v, book2, name)
       && book1 != book2 {
-//      assert book1 in BooksOutstanding(s, name);
-//      assert book2 in BooksOutstanding(s, name);
-//      assert {book1, book2} <= BooksOutstanding(s, name);
-      subsetCardinality({book1, book2}, BooksOutstanding(s, name));
-//      assert |{book1, book2}| <= |BooksOutstanding(s, name)|;
+//      assert book1 in BooksOutstanding(v, name);
+//      assert book2 in BooksOutstanding(v, name);
+//      assert {book1, book2} <= BooksOutstanding(v, name);
+      subsetCardinality({book1, book2}, BooksOutstanding(v, name));
+//      assert |{book1, book2}| <= |BooksOutstanding(v, name)|;
       assert false;
     }
   }
-  if HasAtMostOneBook(s, name) && |BooksOutstanding(s, name)| > 1 {
-    var uniqueBook :| CheckedOutTo(s, uniqueBook, name);
-    var remainingBooks := BooksOutstanding(s, name) - {uniqueBook};
+  if HasAtMostOneBook(v, name) && |BooksOutstanding(v, name)| > 1 {
+    var uniqueBook :| CheckedOutTo(v, uniqueBook, name);
+    var remainingBooks := BooksOutstanding(v, name) - {uniqueBook};
     assert |remainingBooks| > 0;  // tickle set cardinality relation.
 //    var otherBook :| otherBook in remainingBooks;
 //    assert false;
@@ -91,40 +91,40 @@ lemma SafetySynonyms(s: Library, name: string)
 // ...and then invoke that lemma in the same basic proof structure as
 // in the first case. Perhaps you could write a proof that worked just
 // on the set definition?
-lemma InductiveStep(s: Library, s': Library)
-  requires Inv(s)
-  requires Next(s, s')
-  ensures Inv(s')
+lemma InductiveStep(v: Library, v': Library)
+  requires Inv(v)
+  requires Next(v, v')
+  ensures Inv(v')
 {
-  forall name ensures |BooksOutstanding(s', name)| <= 1
+  forall name ensures |BooksOutstanding(v', name)| <= 1
   {
-    SafetySynonyms(s, name);
-    assert HasAtMostOneBook(s, name);
-    if book, patron :| CheckOut(s, s', book, patron) {
+    SafetySynonyms(v, name);
+    assert HasAtMostOneBook(v, name);
+    if book, patron :| CheckOut(v, v', book, patron) {
       forall book1, book2
-        | CheckedOutTo(s', book1, name) && CheckedOutTo(s', book2, name)
+        | CheckedOutTo(v', book1, name) && CheckedOutTo(v', book2, name)
         ensures book1 == book2
       {
-        if !CheckedOutTo(s, book1, name) {
+        if !CheckedOutTo(v, book1, name) {
           assert book1 == book;
         }
-        if !CheckedOutTo(s, book2, name) {
+        if !CheckedOutTo(v, book2, name) {
           assert book2 == book;
         }
       }
-      assert HasAtMostOneBook(s', name);
+      assert HasAtMostOneBook(v', name);
     } else {
-      var book, patron :| CheckIn(s, s', book, patron);
+      var book, patron :| CheckIn(v, v', book, patron);
       forall book1, book2
-        | CheckedOutTo(s', book1, name) && CheckedOutTo(s', book2, name)
+        | CheckedOutTo(v', book1, name) && CheckedOutTo(v', book2, name)
         ensures book1 == book2
       {
-        assert CheckedOutTo(s, book1, name);
-        assert CheckedOutTo(s, book2, name);
+        assert CheckedOutTo(v, book1, name);
+        assert CheckedOutTo(v, book2, name);
       }
-      assert HasAtMostOneBook(s', name);
+      assert HasAtMostOneBook(v', name);
     }
-    SafetySynonyms(s', name);
+    SafetySynonyms(v', name);
   }
 }
 

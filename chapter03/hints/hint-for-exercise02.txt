@@ -1,0 +1,5 @@
+Each philosopher has a bool indicating whether they hold each of the chopsticks within their reach.
+
+datatype Pair = Pair(left:bool, right:bool)
+datatype State = State(philosophers:seq<Pair>)
+

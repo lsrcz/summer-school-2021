@@ -2,32 +2,32 @@ datatype ServerGrant = Unlocked | Client(id: nat)
 
 datatype ClientRecord = Released | Acquired
 
-datatype State = State(server: ServerGrant, clients: seq<ClientRecord>)
+datatype Variables = Variables(server: ServerGrant, clients: seq<ClientRecord>)
 
-predicate Init(s: State) {
-  && s.server.Unlocked?
-  && forall i | 0 <= i < |s.clients| :: s.clients[i].Released?
+predicate Init(v: Variables) {
+  && v.server.Unlocked?
+  && forall i | 0 <= i < |v.clients| :: v.clients[i].Released?
 }
 
-predicate Acquire(s: State, s':State, id:int) {
-  && 0 <= id < |s.clients|
-  && s.server.Unlocked?
-  && s'.server == Client(id)
-  && |s'.clients| == |s.clients|  // Don't lose track of any clients.
-  && ( forall i | 0 <= i < |s.clients| ::
-      s'.clients[i] == if i == id then Acquired else s.clients[i] )
+predicate Acquire(v: Variables, v':Variables, id:int) {
+  && 0 <= id < |v.clients|
+  && v.server.Unlocked?
+  && v'.server == Client(id)
+  && |v'.clients| == |v.clients|  // Don't lose track of any clients.
+  && ( forall i | 0 <= i < |v.clients| ::
+      v'.clients[i] == if i == id then Acquired else v.clients[i] )
 }
 
-predicate Release(s: State, s':State, id:int) {
-  && 0 <= id < |s.clients|
-  && s.clients[id].Acquired?
-  && s'.server.Unlocked?
-  && |s'.clients| == |s.clients|  // Don't lose track of any clients.
-  && ( forall i | 0 <= i < |s.clients| ::
-      s'.clients[i] == if i == id then Released else s.clients[i] )
+predicate Release(v: Variables, v':Variables, id:int) {
+  && 0 <= id < |v.clients|
+  && v.clients[id].Acquired?
+  && v'.server.Unlocked?
+  && |v'.clients| == |v.clients|  // Don't lose track of any clients.
+  && ( forall i | 0 <= i < |v.clients| ::
+      v'.clients[i] == if i == id then Released else v.clients[i] )
 }
 
-predicate Next(s: State, s':State) {
-  || ( exists id :: Acquire(s, s', id) )
-  || ( exists id :: Release(s, s', id) )
+predicate Next(v: Variables, v':Variables) {
+  || ( exists id :: Acquire(v, v', id) )
+  || ( exists id :: Release(v, v', id) )
 }
