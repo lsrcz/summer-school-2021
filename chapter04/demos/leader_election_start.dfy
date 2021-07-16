@@ -10,12 +10,8 @@ datatype RawConstants = RawConstants(ids: seq<nat>) {
 
   predicate WF() {
     && 0 < |k.ids|
-    && UniqueIds()
   }
 }
-
-//type Constants = rc:RawConstants | rc.WF()
-type Constants = RawConstants
 
 // The highest other identifier this node has heard about.
 datatype Variables = Variables(highest_heard: seq<nat>) {
@@ -25,7 +21,6 @@ datatype Variables = Variables(highest_heard: seq<nat>) {
     && |highest_heard| == |k.ids|
   }
 }
-// type Variables = rv:RawVariables | rv.WF(k) // can't do this because k isn't constant (ha ha)
 
 predicate Init(k: Constants, v: Variables)
 {
@@ -51,21 +46,19 @@ predicate Transmission(k: Constants, v: Variables, v': Variables, src: nat)
   && k.WF()
   && v.WF(k)
   && v'.WF(k)
-  && 0 <= src < |k.ids|
+  && ValidIdx(k, src)
 
   // Neighbor address in ring.
-  // TODO let's try it with modulo, too.
   && var dst := NextIdx(k, src);
-  // Yeah turns out modulo makes dafny stupid.
-  // && var dst := (src + 1) % |k.ids|;
 
   // src sends the max of its highest_heard value and its own id.
   && var message := max(v.highest_heard[src], k.ids[src]);
-  && var dst_new_max := max(v.highest_heard[dst], message);
-  // Here's bug 1: we compute the max of the message with the highest_heard of dst,
-  // and then ignore it.
 
-  && v' == v.(highest_heard := v.highest_heard[dst := dst_new_max])
+  // dst only overwrites its highest_heard if the message is higher.
+  && var dst_new_max := max(v.highest_heard[dst], message);
+  // XXX Manos: How could this have been a bug!? How could a src, having sent message X, ever send message Y < X!?
+
+  && v' == v.(highest_heard := v.highest_heard[dst := message])
 }
 
 datatype Step = TransmissionStep(src: nat)
@@ -82,6 +75,10 @@ predicate Next(k: Constants, v: Variables, v': Variables)
   exists step :: NextStep(k, v, v', step)
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Spec (proof goal)
+//////////////////////////////////////////////////////////////////////////////
+
 predicate IsLeader(k: Constants, v: Variables, i: nat)
   requires k.WF()
   requires v.WF(k)
@@ -90,7 +87,6 @@ predicate IsLeader(k: Constants, v: Variables, i: nat)
   && v.highest_heard[i] == k.ids[i]
 }
 
-// TODO note that the elected leader isn't stable, which isn't ideal.
 predicate Safety(k: Constants, v: Variables)
   requires k.WF()
   requires v.WF(k)
@@ -98,40 +94,15 @@ predicate Safety(k: Constants, v: Variables)
   forall i, j | IsLeader(k, v, i) && IsLeader(k, v, j) :: i == j
 }
 
-predicate IsMaxId(k: Constants, i: nat)
-  requires k.WF()
-  requires ValidIdx(k, i)
-{
-  forall j | ValidIdx(k, j) :: k.ids[j] <= k.ids[i]
-}
-
-predicate Between(k: Constants, startExclusive: nat, idx: nat, endExclusive: nat)
-  requires k.WF()
-  requires ValidIdx(k, startExclusive)
-  requires ValidIdx(k, idx)
-  requires ValidIdx(k, endExclusive)
-{
-  if startExclusive < endExclusive
-  then startExclusive < idx < endExclusive
-  else idx < endExclusive || startExclusive < idx
-}
-
-// An identifier that has "reached" a distant node some way around the
-// ring is at least as high as the id of every node it has passed.
-predicate IDOnChordDominatesIDs(k: Constants, v: Variables)
-  requires k.WF()
-  requires v.WF(k)
-{
-  forall i, j | ValidIdx(k, i) && ValidIdx(k, j) && k.ids[i] == v.highest_heard[j] ::
-    forall m | ValidIdx(k, m) && Between(k, i, m, j) :: k.ids[i] > k.ids[m]
-}
+//////////////////////////////////////////////////////////////////////////////
+// Proof
+//////////////////////////////////////////////////////////////////////////////
 
 predicate Inv(k: Constants, v: Variables)
 {
   && k.WF()
   && v.WF(k)
   && Safety(k, v)
-  && IDOnChordDominatesIDs(k, v)
 }
 
 lemma InitImpliesInv(k: Constants, v: Variables)
