@@ -1,5 +1,5 @@
 // Each node's identifier (address)
-datatype RawConstants = RawConstants(ids: seq<nat>) {
+datatype Constants = Constants(ids: seq<nat>) {
   predicate ValidIdx(i: nat) {
     0<=i<|ids|
   }
@@ -9,7 +9,7 @@ datatype RawConstants = RawConstants(ids: seq<nat>) {
   }
 
   predicate WF() {
-    && 0 < |k.ids|
+    && 0 < |ids|
   }
 }
 
@@ -36,9 +36,9 @@ function max(a: nat, b: nat) : nat {
 
 function NextIdx(k: Constants, idx: nat) : nat
   requires k.WF()
-  requires ValidIdx(k, idx)
+  requires k.ValidIdx(idx)
 {
-  if idx + 1 < |k.ids| then idx + 1 else 0
+  (idx + 1) % |k.ids|
 }
 
 predicate Transmission(k: Constants, v: Variables, v': Variables, src: nat)
@@ -46,7 +46,7 @@ predicate Transmission(k: Constants, v: Variables, v': Variables, src: nat)
   && k.WF()
   && v.WF(k)
   && v'.WF(k)
-  && ValidIdx(k, src)
+  && k.ValidIdx(src)
 
   // Neighbor address in ring.
   && var dst := NextIdx(k, src);
@@ -83,7 +83,7 @@ predicate IsLeader(k: Constants, v: Variables, i: nat)
   requires k.WF()
   requires v.WF(k)
 {
-  && ValidIdx(k, i)
+  && k.ValidIdx(i)
   && v.highest_heard[i] == k.ids[i]
 }
 
