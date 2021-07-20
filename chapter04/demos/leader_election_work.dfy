@@ -5,7 +5,7 @@ datatype Constants = Constants(ids: seq<nat>) {
   }
 
   predicate UniqueIds() {
-    (forall i, j | ValidIdx(i) && ValidIdx(j) && ids[i]==ids[j] :: i == j)
+    (forall i:nat, j:nat | ValidIdx(i) && ValidIdx(j) && ids[i]==ids[j] :: i == j)
   }
 
   predicate WF() {
@@ -14,7 +14,7 @@ datatype Constants = Constants(ids: seq<nat>) {
 }
 
 // The highest other identifier this node has heard about.
-datatype Variables = Variables(highest_heard: seq<nat>) {
+datatype Variables = Variables(highest_heard: seq<int>) {
   predicate WF(k: Constants)
     requires k.WF()
   {
@@ -25,13 +25,12 @@ datatype Variables = Variables(highest_heard: seq<nat>) {
 predicate Init(k: Constants, v: Variables)
 {
   && k.WF()
-  && k.UniqueIds()
   && v.WF(k)
     // Everyone begins having heard about nobody, not even themselves.
-  && (forall i | k.ValidIdx(i) :: v.highest_heard[i] == -1)
+  && (forall i:nat | k.ValidIdx(i) :: v.highest_heard[i] == -1)
 }
 
-function max(a: nat, b: nat) : nat {
+function max(a: int, b: int) : int {
   if a > b then a else b
 }
 
@@ -99,11 +98,52 @@ predicate Safety(k: Constants, v: Variables)
 // Proof
 //////////////////////////////////////////////////////////////////////////////
 
+predicate Between(k: Constants, startExclusive: nat, i: nat, endExclusive: nat)
+{
+  if startExclusive < endExclusive
+  then
+    startExclusive < i < endExclusive
+  else
+    startExclusive < i || i < endExclusive
+}
+
+predicate HeardOnChordDominatesID(k: Constants, v: Variables, start: nat, end: nat)
+{
+  (
+    && k.WF()
+    && v.WF(k)
+    && k.ValidIdx(start)
+    && k.ValidIdx(end)
+    && k.ids[start] == v.highest_heard[end]
+  )
+  ==> (forall i:nat | k.ValidIdx(i) && Between(k, start, i, end) :: v.highest_heard[i] > k.ids[i])
+}
+
+predicate HeardDominatesInv(k: Constants, v: Variables)
+{
+  && (forall start, end | k.ValidIdx(start) && k.ValidIdx(end) :: HeardOnChordDominatesID(k, v, start, end))
+}
+
 predicate Inv(k: Constants, v: Variables)
 {
   && k.WF()
   && v.WF(k)
   && Safety(k, v)
+  && HeardDominatesInv(k, v)
+}
+
+lemma Boink()
+{
+  var k := Constants([3, 3]);
+  var v0 := Variables([-1, -1]);
+  var v1 := Variables([-1, 3]);
+  var v2 := Variables([3, 3]);
+  assert Init(k, v0);
+  assert Transmission(k, v0, v1, 0);
+  assert Transmission(k, v1, v2, 1);
+  assert IsLeader(k, v2, 0);
+  assert IsLeader(k, v2, 1);
+  assert !Safety(k, v2);
 }
 
 lemma InitImpliesInv(k: Constants, v: Variables)
@@ -111,12 +151,47 @@ lemma InitImpliesInv(k: Constants, v: Variables)
   ensures Inv(k, v)
 {
 }
-
+  
 lemma NextPreservesInv(k: Constants, v: Variables, v': Variables)
   requires Inv(k, v)
   requires Next(k, v, v')
   ensures Inv(k, v')
 {
+  var step :| NextStep(k, v, v', step);
+  assert Transmission(k, v, v', step.src);
+  forall start:nat, end:nat | k.ValidIdx(start) && k.ValidIdx(end) ensures HeardOnChordDominatesID(k, v', start, end)
+  {
+    if (
+      && k.WF()
+      && v'.WF(k)
+      && k.ValidIdx(start)
+      && k.ValidIdx(end)
+      && k.ids[start] == v'.highest_heard[end]
+    ) {
+      forall i:nat | k.ValidIdx(i) && Between(k, start, i, end)
+        ensures v'.highest_heard[i] > k.ids[i]
+      {
+        var dst := NextIdx(k, step.src);
+        if i==end {
+          assert v'.highest_heard[i] > k.ids[i];
+        } else if i==start {
+          assert v'.highest_heard[i] > k.ids[i];
+        } else if i==dst {
+          assert v'.highest_heard[i] > k.ids[i];
+        } else {
+          assert v'.highest_heard[i] == v.highest_heard[i];
+          assert HeardOnChordDominatesID(k, v, start, end);
+          if v'.highest_heard[end] != v.highest_heard[end] {
+            assert v'.highest_heard[end] > v.highest_heard[end];
+          }
+          assert v'.highest_heard[end] == v.highest_heard[end];
+          assert k.ids[start] == v.highest_heard[end];
+          assert v.highest_heard[i] > k.ids[i];
+          assert v'.highest_heard[i] > k.ids[i];
+        }
+      }
+    }
+  }
 }
 
 lemma InvImpliesSafety(k: Constants, v: Variables)
