@@ -17,12 +17,12 @@ newgrp docker
 (This is the slow thing; it includes a couple GB of Ubuntu.)
 
 ```bash
-    docker pull jonhdotnet/summer_school:1.0
+    docker pull jonhdotnet/summer_school:1.1
 ```
 
 # Test that the image works
 ```bash
-    docker container run -t -i jonhdotnet/summer_school:1.0 /bin/bash
+    docker container run -t -i jonhdotnet/summer_school:1.1 /bin/bash
     dafny test.dfy
     exit
 ```
@@ -31,9 +31,9 @@ If everything is working, you should see:
 
 ```bash
 Dafny 2.3.0.10506
-test.dfy(3,0): Error BP5003: A postcondition might not hold on this return path.
+test.dfy(6,0): Error BP5003: A postcondition might not hold on this return path.
 
-test.dfy(2,12): Related location: This is the postcondition that might not hold.
+test.dfy(5,12): Related location: This is the postcondition that might not hold.
 
 Execution trace:
     (0,0): anon0
