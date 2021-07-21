@@ -48,7 +48,7 @@ Run the image connected to your filesystem so you can edit in your OS, and then 
 ```bash
 mkdir work
 cd work
-docker container run -t -i --mount src="`pwd`",target=/home/dafnyserver/work,type=bind --workdir /home/dafnyserver/work jonhdotnet/summer_school:1.0 /bin/bash
+docker container run -t -i --mount src="`pwd`",target=/home/dafnyserver/work,type=bind --workdir /home/dafnyserver/work jonhdotnet/summer_school:1.1 /bin/bash
 git clone https://github.com/GLaDOS-Michigan/summer-school-2020.git
 cd summer-school-2020/chapter01
 ```
