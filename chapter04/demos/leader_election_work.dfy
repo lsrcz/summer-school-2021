@@ -58,7 +58,7 @@ predicate Transmission(k: Constants, v: Variables, v': Variables, src: nat)
   && var dst_new_max := max(v.highest_heard[dst], message);
   // XXX Manos: How could this have been a bug!? How could a src, having sent message X, ever send message Y < X!?
 
-  && v' == v.(highest_heard := v.highest_heard[dst := message])
+  && v' == v.(highest_heard := v.highest_heard[dst := dst_new_max])
 }
 
 datatype Step = TransmissionStep(src: nat)
@@ -171,22 +171,36 @@ lemma NextPreservesInv(k: Constants, v: Variables, v': Variables)
       forall i:nat | k.ValidIdx(i) && Between(k, start, i, end)
         ensures v'.highest_heard[i] > k.ids[i]
       {
-        var dst := NextIdx(k, step.src);
+        var src := step.src;
+        var dst := NextIdx(k, src);
         if i==end {
           assert v'.highest_heard[i] > k.ids[i];
         } else if i==start {
           assert v'.highest_heard[i] > k.ids[i];
-        } else if i==dst {
+        } else if dst == end {
+          // old chord changed
           assert v'.highest_heard[i] > k.ids[i];
-        } else {
-          assert v'.highest_heard[i] == v.highest_heard[i];
-          assert HeardOnChordDominatesID(k, v, start, end);
-          if v'.highest_heard[end] != v.highest_heard[end] {
-            assert v'.highest_heard[end] > v.highest_heard[end];
-          }
-          assert v'.highest_heard[end] == v.highest_heard[end];
+        } else if dst == i {
+          // start < i, dst < end, so transmission didn't change anything.
+          assert v.highest_heard[end] == v'.highest_heard[end];
           assert k.ids[start] == v.highest_heard[end];
           assert v.highest_heard[i] > k.ids[i];
+          assert v'.highest_heard[i] == v'.highest_heard[i];
+          assert v'.highest_heard[src] == v'.highest_heard[src];
+          var message := max(v.highest_heard[src], k.ids[src]);
+          var dst_new_max := max(v.highest_heard[dst], message);
+          assert v'.highest_heard[i] == dst_new_max;
+          assert dst_new_max >= message;
+          assert message >= k.ids[src];
+          assert k.ids[src] > k.ids[i];
+
+          assert v'.highest_heard[i] > k.ids[i];
+//        } else if HeardOnChordDominatesID(k, v, start, end) {
+//          assert v.highest_heard[i] > k.ids[i];
+//          assert v.highest_heard[i] == v'.highest_heard[i];
+//          assert v'.highest_heard[i] > k.ids[i];
+        } else {
+          // new chord shows up?
           assert v'.highest_heard[i] > k.ids[i];
         }
       }
