@@ -107,15 +107,17 @@ predicate Between(k: Constants, startExclusive: nat, i: nat, endExclusive: nat)
     startExclusive < i || i < endExclusive
 }
 
+predicate IsChord(k: Constants, v: Variables, start: nat, end: nat)
+{
+  && k.WF()
+  && v.WF(k)
+  && k.ValidIdx(start)
+  && k.ValidIdx(end)
+  && k.ids[start] == v.highest_heard[end]
+}
 predicate HeardOnChordDominatesID(k: Constants, v: Variables, start: nat, end: nat)
 {
-  (
-    && k.WF()
-    && v.WF(k)
-    && k.ValidIdx(start)
-    && k.ValidIdx(end)
-    && k.ids[start] == v.highest_heard[end]
-  )
+  IsChord(k, v, start, end)
   ==> (forall i:nat | k.ValidIdx(i) && Between(k, start, i, end) :: v.highest_heard[i] > k.ids[i])
 }
 
@@ -192,13 +194,20 @@ lemma NextPreservesInv(k: Constants, v: Variables, v': Variables)
           assert v'.highest_heard[i] == dst_new_max;
           assert dst_new_max >= message;
           assert message >= k.ids[src];
-          assert k.ids[src] > k.ids[i];
-
-          assert v'.highest_heard[i] > k.ids[i];
-//        } else if HeardOnChordDominatesID(k, v, start, end) {
-//          assert v.highest_heard[i] > k.ids[i];
-//          assert v.highest_heard[i] == v'.highest_heard[i];
-//          assert v'.highest_heard[i] > k.ids[i];
+          if (start == src) {
+            assert v'.highest_heard[i] > k.ids[i];
+          } else {
+            if !Between(k, start, src, end) {
+              assert Between(k, src, start, end);
+              assert false;
+            }
+            assert Between(k, start, src, end);
+            assert HeardOnChordDominatesID(k, v, start, end);
+            assert IsChord(k, v, start, end);
+            assert k.ids[start] == v.highest_heard[end];
+            assert k.ids[src] > k.ids[i];
+            assert v'.highest_heard[i] > k.ids[i];
+          }
         } else {
           // new chord shows up?
           assert v'.highest_heard[i] > k.ids[i];

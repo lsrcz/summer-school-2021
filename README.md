@@ -22,7 +22,7 @@ newgrp docker
 
 # Test that the image works
 ```bash
-​    docker container run -t -i jonhdotnet/summer_school:1.0 /bin/bash
+    docker container run -t -i jonhdotnet/summer_school:1.0 /bin/bash
     dafny test.dfy
     exit
 ```
