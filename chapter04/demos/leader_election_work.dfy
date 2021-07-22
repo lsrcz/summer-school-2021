@@ -10,6 +10,7 @@ datatype Constants = Constants(ids: seq<nat>) {
 
   predicate WF() {
     && 0 < |ids|
+    && UniqueIds()
   }
 }
 
@@ -135,20 +136,6 @@ predicate Inv(k: Constants, v: Variables)
   && HeardDominatesInv(k, v)
 }
 
-lemma Boink()
-{
-  var k := Constants([3, 3]);
-  var v0 := Variables([-1, -1]);
-  var v1 := Variables([-1, 3]);
-  var v2 := Variables([3, 3]);
-  assert Init(k, v0);
-  assert Transmission(k, v0, v1, 0);
-  assert Transmission(k, v1, v2, 1);
-  assert IsLeader(k, v2, 0);
-  assert IsLeader(k, v2, 1);
-  assert !Safety(k, v2);
-}
-
 lemma InitImpliesInv(k: Constants, v: Variables)
   requires Init(k, v)
   ensures Inv(k, v)
@@ -219,8 +206,15 @@ lemma NextPreservesInv(k: Constants, v: Variables, v': Variables)
               }
               assert v'.highest_heard[i] > k.ids[i];
             }
+            assert v'.highest_heard[i] > k.ids[i];
           } else {
+            // dst got src's id, and that was *higher* than src's highest
+            // heard,
             assert v'.highest_heard[dst] == k.ids[src];
+            // which means that this chord must have started at src.
+            assert k.ids[start] == k.ids[src];
+            assert k.UniqueIds();
+            assert src == start;
             assert v'.highest_heard[i] > k.ids[i]; // and here
           }
         } else {
