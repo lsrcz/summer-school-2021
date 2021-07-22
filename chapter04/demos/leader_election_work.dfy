@@ -38,7 +38,8 @@ function NextIdx(k: Constants, idx: nat) : nat
   requires k.WF()
   requires k.ValidIdx(idx)
 {
-  (idx + 1) % |k.ids|
+//  (idx + 1) % |k.ids|
+  if idx+1 == |k.ids| then 0 else idx+1
 }
 
 predicate Transmission(k: Constants, v: Variables, v': Variables, src: nat)
@@ -173,43 +174,56 @@ lemma NextPreservesInv(k: Constants, v: Variables, v': Variables)
       forall i:nat | k.ValidIdx(i) && Between(k, start, i, end)
         ensures v'.highest_heard[i] > k.ids[i]
       {
+        // case analysis step 1: dst changed. Was it between start,end,
+        // equal to start or end, or on the opposide side (end,start)?
+        // answer -> only dst==end matters.
+//        if Between(k, start, dst, end) {
+//          assert v'.highest_heard[i] > k.ids[i];
+//        } else if dst==end {
+//          assert v'.highest_heard[i] > k.ids[i];
+//        } else if dst==start {
+//          assert v'.highest_heard[i] > k.ids[i];
+//        } else {
+//          assert v'.highest_heard[i] > k.ids[i];
+//        }
+
         var src := step.src;
         var dst := NextIdx(k, src);
-        if i==end {
-          assert v'.highest_heard[i] > k.ids[i];
-        } else if i==start {
-          assert v'.highest_heard[i] > k.ids[i];
-        } else if dst == end {
-          // old chord changed
-          assert v'.highest_heard[i] > k.ids[i];
-        } else if dst == i {
-          // start < i, dst < end, so transmission didn't change anything.
-          assert v.highest_heard[end] == v'.highest_heard[end];
-          assert k.ids[start] == v.highest_heard[end];
-          assert v.highest_heard[i] > k.ids[i];
-          assert v'.highest_heard[i] == v'.highest_heard[i];
-          assert v'.highest_heard[src] == v'.highest_heard[src];
-          var message := max(v.highest_heard[src], k.ids[src]);
-          var dst_new_max := max(v.highest_heard[dst], message);
-          assert v'.highest_heard[i] == dst_new_max;
-          assert dst_new_max >= message;
-          assert message >= k.ids[src];
-          if (start == src) {
+        if dst==end {
+          // case analysis step 2:
+          // did dst take on k.ids[src], v.highest_heard[src], or
+          // v.highest_heard[dst]?
+          if v'.highest_heard[dst] == v.highest_heard[dst] {
+            // nothing changed.
             assert v'.highest_heard[i] > k.ids[i];
-          } else {
-            if !Between(k, start, src, end) {
-              assert Between(k, src, start, end);
-              assert false;
+          } else if v'.highest_heard[dst] == v.highest_heard[src] {
+            // src got extended to dst, which means that start->end
+            // must have gone start->src in prior state.
+            assert IsChord(k, v, start, src);
+            if (i==dst) {
+              // src now included in extended chord.
+              assert v'.highest_heard[i] > k.ids[i];
+            } else if (i==src) {
+              assume false;
+              assert v'.highest_heard[i] > k.ids[i]; //here
+            } else {
+              // Covered by prior-state chord.
+              assert Between(k, start, i, dst);
+              if start < dst {
+                assert start < i < dst;
+                assert src < dst;
+                assert i < src;
+                assert Between(k, start, i, src);
+              } else {
+                assert Between(k, start, i, src);
+              }
+              assert v'.highest_heard[i] > k.ids[i];
             }
-            assert Between(k, start, src, end);
-            assert HeardOnChordDominatesID(k, v, start, end);
-            assert IsChord(k, v, start, end);
-            assert k.ids[start] == v.highest_heard[end];
-            assert k.ids[src] > k.ids[i];
-            assert v'.highest_heard[i] > k.ids[i];
+          } else {
+            assert v'.highest_heard[dst] == k.ids[src];
+            assert v'.highest_heard[i] > k.ids[i]; // and here
           }
         } else {
-          // new chord shows up?
           assert v'.highest_heard[i] > k.ids[i];
         }
       }
