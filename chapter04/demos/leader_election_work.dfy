@@ -5,7 +5,7 @@ datatype Constants = Constants(ids: seq<nat>) {
   }
 
   predicate UniqueIds() {
-    (forall i, j | ValidIdx(i) && ValidIdx(j) && ids[i]==ids[j] :: i == j)
+    (forall i:nat, j:nat | ValidIdx(i) && ValidIdx(j) && ids[i]==ids[j] :: i == j)
   }
 
   predicate WF() {
@@ -28,7 +28,7 @@ predicate Init(k: Constants, v: Variables)
   && k.UniqueIds()
   && v.WF(k)
     // Everyone begins having heard about nobody, not even themselves.
-  && (forall i | k.ValidIdx(i) :: v.highest_heard[i] == -1)
+  && (forall i:nat | k.ValidIdx(i) :: v.highest_heard[i] == -1)
 }
 
 function max(a: nat, b: nat) : nat {
