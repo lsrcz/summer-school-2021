@@ -98,6 +98,8 @@ class Profiler:
 
         if len(tuples) > self.args.show:
             tuples = tuples[0:self.args.show]
+        if len(tuples) == 0:
+            print(f"No quantifiers instantiated more than {self.args.freq} times.")
 
         print("%10s %s" % (label, ""))
         for (loc,val) in tuples:
