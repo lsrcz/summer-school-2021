@@ -207,10 +207,28 @@ module RefinementProof {
     else DefaultValue()
   }
 
+  // We recursively construct the finite set of possible map keys here, all
+  // because we need to supply Dafny with simple evidence that our map domain
+  // is finite for the map comprehension in I().
+  // (An alternative would be to switch to imaps -- maps with potentially-infinite
+  // domains -- but that would require making the spec fancier. This was a compromise.)
+  function AllKeysRecurse(c: Constants, v: Variables, count: nat) : set<Key>
+    requires v.WF(c)
+    requires count <= |c.hosts|
+  {
+    if count==0 then {} else AllKeysRecurse(c, v, count-1) + v.hosts[count-1].m.Keys
+  }
+
+  function AllKeys(c: Constants, v: Variables) : set<Key>
+    requires v.WF(c)
+  {
+    AllKeysRecurse(c, v, |c.hosts|)
+  }
+
   function I(c: Constants, v: Variables) : MapSpec.Variables
     requires v.WF(c)
   {
-    MapSpec.Variables(map k | true :: Ik(c, v, k))
+    MapSpec.Variables(map k | k in AllKeys(c, v) :: Ik(c, v, k))
   }
 
   predicate Inv(c: Constants, v: Variables)
