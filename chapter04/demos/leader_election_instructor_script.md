@@ -124,8 +124,6 @@ Use a case analysis on dst
 
 *** TODO -- XXX
 Image fixes:
-- dafny-profile.py
-- pip3 install termcolor
 For "assume" get the calvin & hobbes strip
 ***
 
@@ -252,7 +250,3 @@ v.highest_heard[j] > k.ids[j], which is a contradiction with IsLeader(j).
   FIX UniqueIds.
 
 
-
-------------------------------------------------------------------------------
-
-# Yet another run-through.
