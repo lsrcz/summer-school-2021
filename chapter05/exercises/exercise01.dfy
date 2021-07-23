@@ -1,6 +1,14 @@
 module Types {
-  type Key(==)
-  type Value(==)
+  type Key(==, !new)
+  type Value(==, !new)
+    // (==) means whatever this type is, it has equality defined on it.
+    // !new means this type can't be allocated on the heap; it's a mathematical
+    // immutable object.
+    // Since we're in math-land, not implementation-land, we always want both features
+    // of all types, so we declare them on these otherwise-unspecified types.
+    // Missing == gives "map domain type must support equality" errors.
+    // Missing !new gives "...not allowed to depend on the set of allocated references" errors.
+
   function DefaultValue() : Value
     // No body -> this is an axiom.
 }
@@ -178,17 +186,42 @@ module System {
 }
 
 module RefinementProof {
+  import opened Types
   import MapSpec
   import opened System
 
-  function I(c: Constants, v: Variables) : MapSpec.Variables
+  predicate HostHasKey(c: Constants, v: Variables, i:nat, k:Key)
+    requires v.WF(c)
   {
-    MapSpec.Variables(map[])
+    && c.ValidHost(i)
+    && k in v.hosts[i].m
+  }
+
+  function Ik(c: Constants, v: Variables, k:Key) : Value
+    requires v.WF(c)
+  {
+    if exists i :: HostHasKey(c, v, i, k)
+    then
+      var i:nat :| HostHasKey(c, v, i, k);
+      v.hosts[i].m[k]
+    else DefaultValue()
+  }
+
+  function I(c: Constants, v: Variables) : MapSpec.Variables
+    requires v.WF(c)
+  {
+    MapSpec.Variables(map k | true :: Ik(c, v, k))
   }
 
   predicate Inv(c: Constants, v: Variables)
   {
-    true
+    && v.WF(c)
+    // No two distinct hosts have the same key.
+    && (forall k, i:nat, j:nat
+        | && c.ValidHost(i) && c.ValidHost(j)
+          && k in v.hosts[i].m && k in v.hosts[j].m
+        :: i == j
+      )
   }
 
   lemma InitRefines(c: Constants, v: Variables)
