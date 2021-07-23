@@ -15,45 +15,45 @@ datatype Constants = Constants(ids: seq<nat>) {
 
 // The highest other identifier this node has heard about.
 datatype Variables = Variables(highest_heard: seq<nat>) {
-  predicate WF(k: Constants)
-    requires k.WF()
+  predicate WF(c: Constants)
+    requires c.WF()
   {
-    && |highest_heard| == |k.ids|
+    && |highest_heard| == |c.ids|
   }
 }
 
-predicate Init(k: Constants, v: Variables)
+predicate Init(c: Constants, v: Variables)
 {
-  && k.WF()
-  && k.UniqueIds()
-  && v.WF(k)
+  && c.WF()
+  && c.UniqueIds()
+  && v.WF(c)
     // Everyone begins having heard about nobody, not even themselves.
-  && (forall i | k.ValidIdx(i) :: v.highest_heard[i] == -1)
+  && (forall i | c.ValidIdx(i) :: v.highest_heard[i] == -1)
 }
 
 function max(a: nat, b: nat) : nat {
   if a > b then a else b
 }
 
-function NextIdx(k: Constants, idx: nat) : nat
-  requires k.WF()
-  requires k.ValidIdx(idx)
+function NextIdx(c: Constants, idx: nat) : nat
+  requires c.WF()
+  requires c.ValidIdx(idx)
 {
-  (idx + 1) % |k.ids|
+  (idx + 1) % |c.ids|
 }
 
-predicate Transmission(k: Constants, v: Variables, v': Variables, src: nat)
+predicate Transmission(c: Constants, v: Variables, v': Variables, src: nat)
 {
-  && k.WF()
-  && v.WF(k)
-  && v'.WF(k)
-  && k.ValidIdx(src)
+  && c.WF()
+  && v.WF(c)
+  && v'.WF(c)
+  && c.ValidIdx(src)
 
   // Neighbor address in ring.
-  && var dst := NextIdx(k, src);
+  && var dst := NextIdx(c, src);
 
   // src sends the max of its highest_heard value and its own id.
-  && var message := max(v.highest_heard[src], k.ids[src]);
+  && var message := max(v.highest_heard[src], c.ids[src]);
 
   // dst only overwrites its highest_heard if the message is higher.
   && var dst_new_max := max(v.highest_heard[dst], message);
@@ -64,63 +64,63 @@ predicate Transmission(k: Constants, v: Variables, v': Variables, src: nat)
 
 datatype Step = TransmissionStep(src: nat)
 
-predicate NextStep(k: Constants, v: Variables, v': Variables, step: Step)
+predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
 {
   match step {
-    case TransmissionStep(src) => Transmission(k, v, v', src)
+    case TransmissionStep(src) => Transmission(c, v, v', src)
   }
 }
 
-predicate Next(k: Constants, v: Variables, v': Variables)
+predicate Next(c: Constants, v: Variables, v': Variables)
 {
-  exists step :: NextStep(k, v, v', step)
+  exists step :: NextStep(c, v, v', step)
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Spec (proof goal)
 //////////////////////////////////////////////////////////////////////////////
 
-predicate IsLeader(k: Constants, v: Variables, i: nat)
-  requires k.WF()
-  requires v.WF(k)
+predicate IsLeader(c: Constants, v: Variables, i: nat)
+  requires c.WF()
+  requires v.WF(c)
 {
-  && k.ValidIdx(i)
-  && v.highest_heard[i] == k.ids[i]
+  && c.ValidIdx(i)
+  && v.highest_heard[i] == c.ids[i]
 }
 
-predicate Safety(k: Constants, v: Variables)
-  requires k.WF()
-  requires v.WF(k)
+predicate Safety(c: Constants, v: Variables)
+  requires c.WF()
+  requires v.WF(c)
 {
-  forall i, j | IsLeader(k, v, i) && IsLeader(k, v, j) :: i == j
+  forall i, j | IsLeader(c, v, i) && IsLeader(c, v, j) :: i == j
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // Proof
 //////////////////////////////////////////////////////////////////////////////
 
-predicate Inv(k: Constants, v: Variables)
+predicate Inv(c: Constants, v: Variables)
 {
-  && k.WF()
-  && v.WF(k)
-  && Safety(k, v)
+  && c.WF()
+  && v.WF(c)
+  && Safety(c, v)
 }
 
-lemma InitImpliesInv(k: Constants, v: Variables)
-  requires Init(k, v)
-  ensures Inv(k, v)
-{
-}
-
-lemma NextPreservesInv(k: Constants, v: Variables, v': Variables)
-  requires Inv(k, v)
-  requires Next(k, v, v')
-  ensures Inv(k, v')
+lemma InitImpliesInv(c: Constants, v: Variables)
+  requires Init(c, v)
+  ensures Inv(c, v)
 {
 }
 
-lemma InvImpliesSafety(k: Constants, v: Variables)
-  requires Inv(k, v)
-  ensures Safety(k, v)
+lemma NextPreservesInv(c: Constants, v: Variables, v': Variables)
+  requires Inv(c, v)
+  requires Next(c, v, v')
+  ensures Inv(c, v')
+{
+}
+
+lemma InvImpliesSafety(c: Constants, v: Variables)
+  requires Inv(c, v)
+  ensures Safety(c, v)
 {
 }
