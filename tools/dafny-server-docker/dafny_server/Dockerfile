@@ -28,5 +28,6 @@ RUN mkdir bin
 COPY bin_dafny_sh bin/dafny
 COPY bashrc-appendage /tmp
 RUN cat /tmp/bashrc-appendage >> /home/dafnyserver/.bashrc
+RUN pip3 install termcolor
 ## COPY tutorial.tgz /home/dafnyserver/tutorial.tgz
 ## RUN tar -C /home/dafnyserver -xzf /home/dafnyserver/tutorial.tgz
