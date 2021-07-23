@@ -126,6 +126,7 @@ Use a case analysis on dst
 Image fixes:
 - dafny-profile.py
 - pip3 install termcolor
+For "assume" get the calvin & hobbes strip
 ***
 
 
@@ -165,7 +166,7 @@ Sometimes one chord will gobble up another's head, breaking it, but anytime ther
 chord, all the nodes it has passed over have heard about it and are dominated by it.
 The biggest ID's chord never gets gobbled; eventually it reaches all the way around the ring.
 
-Type out IsChord, OnChordHeardDominatesId.
+FIX Type out IsChord, OnChordHeardDominatesId.
 
 Cheat sheet:
 ```
@@ -201,12 +202,15 @@ Cheat sheet:
 ```
 
 Proof sketch:
-If we are gonna violate Safety, we'll need two idxes i, j tha
+If we are gonna violate Safety, we'll need two idxes i, j that are both the
 leader. WOLOG let i be the one with the larger id. It is leader, so IsChord(k,v,i,i).
 So every *other* node, including j is Between(k, i, j, i), so
 v.highest_heard[j] > k.ids[j], which is a contradiction with IsLeader(j).
 
 ...need to define Between.
+  - why exclusive?
+  - not start, because the NEXT node learn's about start's id. else start would instantly be leader.
+  - not end, because end's highest_heard hasn't considered end's id.
 
 * bring assert into NextPreservesInv
 
@@ -246,3 +250,9 @@ v.highest_heard[j] > k.ids[j], which is a contradiction with IsLeader(j).
   So src!=start.
   assert k.UniqueIds()!
   FIX UniqueIds.
+
+
+
+------------------------------------------------------------------------------
+
+# Yet another run-through.
