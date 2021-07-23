@@ -107,12 +107,14 @@ module Host {
   // "synchronous" message delivery model. (We'll add more realism later.)
   predicate Send(c: Constants, v: Variables, v': Variables, msg: Message)
   {
-    && true
+    && msg.k in v.m // can only give away what I'm authoritative for
+    && v.m[msg.k] == msg.value  // transmit the correct value
+    && v'.m == map k | k in v.m && k!=msg.k :: v.m[k] // forget this key
   }
 
   predicate Receive(c: Constants, v: Variables, v': Variables, msg: Message)
   {
-    && true
+    && v'.m == v.m[msg.k := msg.value]  // learn the new key,value pair.
   }
 }
 
