@@ -242,10 +242,18 @@ module RefinementProof {
       )
   }
 
-  lemma InitAllKeysEmpty(c: Constants, v: Variables, count: nat)
-    requires Init(c, v)
+//  lemma InitAllKeysEmpty(c: Constants, v: Variables, count: nat)
+//    requires Init(c, v)
+//    requires count <= |c.hosts|
+//    ensures AllKeysRecurse(c, v, count) == {}
+//  {
+//  }
+//
+  lemma AllKeysMembership(c: Constants, v: Variables, count: nat)
+    requires Inv(c, v)
     requires count <= |c.hosts|
-    ensures AllKeysRecurse(c, v, count) == {}
+    ensures forall k ::
+      (k in AllKeysRecurse(c, v, count) <==> exists i:nat :: i<count && k in v.hosts[i].m)
   {
   }
 
@@ -254,7 +262,50 @@ module RefinementProof {
     ensures MapSpec.Init(I(c, v))
     ensures Inv(c, v)
   {
-    InitAllKeysEmpty(c, v, |c.hosts|);
+   // InitAllKeysEmpty(c, v, |c.hosts|);
+    AllKeysMembership(c, v, |c.hosts|);
+  }
+
+  lemma InsertPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, insertHost: nat, insertedKey: Key, value: Value)
+    requires Inv(c, v)
+    requires Next(c, v, v')
+    requires c.ValidHost(insertHost)
+    requires (forall j:nat | c.ValidHost(j) && j!=insertHost :: v'.hosts[j] == v.hosts[j]);
+    requires Host.Insert(c.hosts[insertHost], v.hosts[insertHost], v'.hosts[insertHost], insertedKey, value)
+    ensures Inv(c, v')
+    ensures MapSpec.Next(I(c, v), I(c, v'))
+  {
+    var im := I(c, v).m;
+    var im' := I(c, v').m;
+
+    //AllKeysMembership(c, v, |c.hosts|);
+    forall k
+      ensures k in im' <==> k in im || k == insertedKey
+      ensures im'[k] == if k==insertedKey then value else im[k]
+    {
+//      AllKeysMembership(c, v, |c.hosts|);
+      AllKeysMembership(c, v', |c.hosts|);
+//      calc {
+//        k in im';
+//        k in AllKeysRecurse(c, v', |c.hosts|);
+//          { AllKeysMembership(c, v', |c.hosts|); }
+//        exists i:nat :: i<|c.hosts| && k in v'.hosts[i].m;
+//      }
+      if k == insertedKey {
+//        assert insertHost<|c.hosts| && k in v'.hosts[insertHost].m;
+      } else if k in im' {
+//        var khost' :| 0<=khost'<|c.hosts| && k in v'.hosts[khost'].m;
+//        assert khost'<|c.hosts| && k in v.hosts[khost'].m;
+        assert k in im by { AllKeysMembership(c, v, |c.hosts|); }
+      } else if k in im {
+        assert k in im' by { AllKeysMembership(c, v, |c.hosts|); }
+      }
+    }
+    assert im'.Keys == im.Keys + {insertedKey};
+    assert im' == im[insertedKey := value];
+    assert MapSpec.InsertOp(I(c, v), I(c, v'), insertedKey, value);
+    assert MapSpec.NextStep(I(c, v), I(c, v'), MapSpec.InsertOpStep(insertedKey, value)); // witness
+//    assert MapSpec.Next(I(c, v), I(c, v'));
   }
 
   lemma NextPreservesInvAndRefines(c: Constants, v: Variables, v': Variables)
@@ -263,5 +314,30 @@ module RefinementProof {
     ensures Inv(c, v')
     ensures MapSpec.Next(I(c, v), I(c, v'))
   {
+    var step :| NextStep(c, v, v', step);
+    match step
+      case LocalOpStep(i) => {
+        var hstep :| Host.LocalOpStep(c.hosts[i], v.hosts[i], v'.hosts[i], hstep);
+        match hstep
+          case InsertStep(k, value) => InsertPreservesInvAndRefines(c, v, v', i, k, value);
+          case QueryStep(k, output) => {
+            assume false;
+            assert Inv(c, v');
+            assert I(c, v) == I(c, v');
+            assert MapSpec.Next(I(c, v), I(c, v'));
+          }
+          case FillDefaultStep(k) => {
+            assume false;
+            assert Inv(c, v');
+            assert I(c, v) == I(c, v');
+            assert MapSpec.Next(I(c, v), I(c, v'));
+          }
+      }
+      case TransmitOpStep(src, dst, message) => {
+        assume false;
+        assert Inv(c, v');
+        assert I(c, v) == I(c, v');
+        assert MapSpec.Next(I(c, v), I(c, v'));
+      }
   }
 }
