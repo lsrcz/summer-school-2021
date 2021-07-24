@@ -197,13 +197,25 @@ module RefinementProof {
     && k in v.hosts[i].m
   }
 
+  // Pulling the choose out into its own function is sometimes necessary due
+  // to a (deliberate) stupidity in Dafny: it doesn't treat :| expressions
+  // as subsitution-equivalent, even though the are (as evidenced by pulling
+  // one into a function).
+  function TheHostWithKey(c: Constants, v: Variables, k:Key) : nat
+    requires v.WF(c)
+    requires exists i :: HostHasKey(c, v, i, k);
+  {
+    var i:nat :| HostHasKey(c, v, i, k);
+    i
+  }
+
+
   function Ik(c: Constants, v: Variables, k:Key) : Value
     requires v.WF(c)
   {
     if exists i :: HostHasKey(c, v, i, k)
     then
-      var i:nat :| HostHasKey(c, v, i, k);
-      v.hosts[i].m[k]
+      v.hosts[TheHostWithKey(c, v, k)].m[k]
     else DefaultValue()
   }
 
@@ -278,34 +290,36 @@ module RefinementProof {
     var im := I(c, v).m;
     var im' := I(c, v').m;
 
-    //AllKeysMembership(c, v, |c.hosts|);
     forall k
-      ensures k in im' <==> k in im || k == insertedKey
-      ensures im'[k] == if k==insertedKey then value else im[k]
+      ensures k in im' <==> k in im || k == insertedKey // domain
+      ensures k in im' ==> (im'[k] == if k==insertedKey then value else im[k])  // value
     {
-//      AllKeysMembership(c, v, |c.hosts|);
       AllKeysMembership(c, v', |c.hosts|);
-//      calc {
-//        k in im';
-//        k in AllKeysRecurse(c, v', |c.hosts|);
-//          { AllKeysMembership(c, v', |c.hosts|); }
-//        exists i:nat :: i<|c.hosts| && k in v'.hosts[i].m;
-//      }
+      // Narrowing the calls to AllKeysMembership(v) helps z3 save 15s!
+      // (But domain proof can be replaced with just AllKeysMembership(v);AllKeysMembership(v') and it'll still work.)
       if k == insertedKey {
-//        assert insertHost<|c.hosts| && k in v'.hosts[insertHost].m;
       } else if k in im' {
-//        var khost' :| 0<=khost'<|c.hosts| && k in v'.hosts[khost'].m;
-//        assert khost'<|c.hosts| && k in v.hosts[khost'].m;
         assert k in im by { AllKeysMembership(c, v, |c.hosts|); }
       } else if k in im {
         assert k in im' by { AllKeysMembership(c, v, |c.hosts|); }
       }
+
+      if k in im' {
+        if k==insertedKey {
+          assert HostHasKey(c, v', insertHost, k);  // trigger
+          assert Ik(c, v', k) == value; // trigger
+        } else {
+          var ihost:nat :| ihost<|c.hosts| && k in v'.hosts[ihost].m;
+          assert forall j | c.ValidHost(j) && j!=ihost :: !HostHasKey(c, v, j, k);  // trigger
+          assert HostHasKey(c, v', ihost, k) by { AllKeysMembership(c, v, |c.hosts|); }
+          assert TheHostWithKey(c, v', k) == ihost; // witness
+          assert im'[k] == im[k]; // trigger
+        }
+      }
     }
-    assert im'.Keys == im.Keys + {insertedKey};
-    assert im' == im[insertedKey := value];
-    assert MapSpec.InsertOp(I(c, v), I(c, v'), insertedKey, value);
+
+    assert MapSpec.InsertOp(I(c, v), I(c, v'), insertedKey, value); // bizarre magic backwards causality-violating trigger
     assert MapSpec.NextStep(I(c, v), I(c, v'), MapSpec.InsertOpStep(insertedKey, value)); // witness
-//    assert MapSpec.Next(I(c, v), I(c, v'));
   }
 
   lemma NextPreservesInvAndRefines(c: Constants, v: Variables, v': Variables)
