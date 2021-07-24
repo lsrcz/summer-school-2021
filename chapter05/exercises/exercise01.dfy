@@ -242,11 +242,19 @@ module RefinementProof {
       )
   }
 
+  lemma InitAllKeysEmpty(c: Constants, v: Variables, count: nat)
+    requires Init(c, v)
+    requires count <= |c.hosts|
+    ensures AllKeysRecurse(c, v, count) == {}
+  {
+  }
+
   lemma InitRefines(c: Constants, v: Variables)
     requires Init(c, v)
     ensures MapSpec.Init(I(c, v))
     ensures Inv(c, v)
   {
+    InitAllKeysEmpty(c, v, |c.hosts|);
   }
 
   lemma NextPreservesInvAndRefines(c: Constants, v: Variables, v': Variables)
