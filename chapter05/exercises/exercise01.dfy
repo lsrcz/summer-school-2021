@@ -37,11 +37,13 @@ module MapSpec {
 
   predicate InsertOp(v_:Variables, v_':Variables, key:Key, value:Value)
   {
-    v_'.mapp == v_.mapp[key := value]
+    && key in AllKeys()
+    && v_'.mapp == v_.mapp[key := value]
   }
 
   predicate QueryOp(v_:Variables, v_':Variables, key:Key, output:Value)
   {
+    && key in AllKeys()
     && (output == if key in v_.mapp then v_.mapp[key] else DefaultValue())
     && v_' == v_  // no change to map state
   }
@@ -235,8 +237,9 @@ module RefinementProof {
     if count==0 then {} else AllKeysRecurse(c_, v_, count-1) + v_.hosts[count-1].mapp.Keys
   }
 
-  function AllKeys(c_: Constants, v_: Variables) : set<Key>
+  function KnownKeys(c_: Constants, v_: Variables) : set<Key>
     requires v_.WF(c_)
+    ensures forall idx | 0 <= idx < |c_.hosts| :: v_.hosts[idx].mapp.Keys <= KnownKeys(c_, v_)
   {
     AllKeysRecurse(c_, v_, |c_.hosts|)
   }
@@ -244,19 +247,25 @@ module RefinementProof {
   function Abstraction(c_: Constants, v_: Variables) : MapSpec.Variables
     requires v_.WF(c_)
   {
-    MapSpec.Variables(map key | key in AllKeys(c_, v_) :: AbstractionOneKey(c_, v_, key))
+    MapSpec.Variables(map key | key in KnownKeys(c_, v_) :: AbstractionOneKey(c_, v_, key))
+  }
+
+  predicate KeysHeldUniquely(c_: Constants, v_: Variables)
+  {
+    forall key, hostidx:nat, otherhost:nat
+        | && c_.ValidHost(hostidx) && c_.ValidHost(otherhost)
+          && key in v_.hosts[hostidx].mapp && key in v_.hosts[otherhost].mapp
+        :: hostidx == otherhost
   }
 
   predicate Inv(c_: Constants, v_: Variables)
   {
     && c_.WF()
     && v_.WF(c_)
-    // No two distinct hosts have the same key.
-    && (forall key, hostidx:nat, otherhost:nat
-        | && c_.ValidHost(hostidx) && c_.ValidHost(otherhost)
-          && key in v_.hosts[hostidx].mapp && key in v_.hosts[otherhost].mapp
-        :: hostidx == otherhost
-      )
+    // Every key lives somewhere.
+    && KnownKeys(c_, v_) == Types.AllKeys()
+    // No key lives in two places.
+    && KeysHeldUniquely(c_, v_)
   }
 
   lemma InitAllKeysEmpty(c_: Constants, v_: Variables, count: nat)
@@ -346,9 +355,15 @@ module RefinementProof {
         match hstep
           case InsertStep(key, value) => InsertPreservesInvAndRefines(c_, v_, v_', idx, key, value);
           case QueryStep(key, output) => {
+            forall key ensures key in Types.AllKeys() <==> key in KnownKeys(c_, v_') {
+            }
             assert Inv(c_, v_');
             assert v_ == v_'; // weirdly obvious trigger
             assert Abstraction(c_, v_) == Abstraction(c_, v_');
+            assert Abstraction(c_, v_).mapp.Keys == Types.AllKeys();
+            assert key in v_.hosts[idx].mapp.Keys;
+            assert key in KnownKeys(c_, v_);
+            assert key in Types.AllKeys();
             assert output == Abstraction(c_, v_).mapp[key];
             assert MapSpec.QueryOp(Abstraction(c_, v_), Abstraction(c_, v_'), key, output);
             assert MapSpec.NextStep(Abstraction(c_, v_), Abstraction(c_, v_'), MapSpec.QueryOpStep(key, output));
