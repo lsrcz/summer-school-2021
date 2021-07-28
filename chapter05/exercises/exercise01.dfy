@@ -1,4 +1,5 @@
 module Types {
+  // TODO finite domain of keys so we can use finite-domained maps and avoid manager nonsense
   type Key(==, !new)
   type Value(==, !new)
     // (==) means whatever this type is, it has equality defined on it.
@@ -98,9 +99,9 @@ module Host {
   predicate LocalOpStep(c: Constants, v: Variables, v': Variables, step: Step)
   {
     match step
-      case InsertStep(k, value) => Insert(c, v, v', k, value)
-      case QueryStep(k, output) => Query(c, v, v', k, output)
-      case FillDefaultStep(k) => FillDefault(c, v, v', k)
+      case InsertStep(key, value) => Insert(c, v, v', key, value)
+      case QueryStep(key, output) => Query(c, v, v', key, output)
+      case FillDefaultStep(key) => FillDefault(c, v, v', key)
   }
 
   predicate LocalOp(c: Constants, v: Variables, v': Variables)
@@ -115,7 +116,7 @@ module Host {
   // "synchronous" message delivery model. (We'll add more realism later.)
   predicate Send(c: Constants, v: Variables, v': Variables, msg: Message)
   {
-    && msg.k in v.m // can only give away what I'm authoritative for
+    && msg.k in v.m // can only give away what Abstraction'm authoritative for
     && v.m[msg.k] == msg.value  // transmit the correct value
     && v'.m == map k | k in v.m && k!=msg.k :: v.m[k] // forget this key
   }
@@ -210,18 +211,18 @@ module RefinementProof {
   }
 
 
-  function Ik(c: Constants, v: Variables, k:Key) : Value
+  function Ikey(c: Constants, v: Variables, key:Key) : Value
     requires v.WF(c)
   {
-    if exists i :: HostHasKey(c, v, i, k)
+    if exists idx :: HostHasKey(c, v, idx, key)
     then
-      v.hosts[TheHostWithKey(c, v, k)].m[k]
+      v.hosts[TheHostWithKey(c, v, key)].m[key]
     else DefaultValue()
   }
 
   // We recursively construct the finite set of possible map keys here, all
   // because we need to supply Dafny with simple evidence that our map domain
-  // is finite for the map comprehension in I().
+  // is finite for the map comprehension in Abstraction().
   // (An alternative would be to switch to imaps -- maps with potentially-infinite
   // domains -- but that would require making the spec fancier. This was a compromise.)
   function AllKeysRecurse(c: Constants, v: Variables, count: nat) : set<Key>
@@ -237,10 +238,10 @@ module RefinementProof {
     AllKeysRecurse(c, v, |c.hosts|)
   }
 
-  function I(c: Constants, v: Variables) : MapSpec.Variables
+  function Abstraction(c: Constants, v: Variables) : MapSpec.Variables
     requires v.WF(c)
   {
-    MapSpec.Variables(map k | k in AllKeys(c, v) :: Ik(c, v, k))
+    MapSpec.Variables(map k | k in AllKeys(c, v) :: Ikey(c, v, k))
   }
 
   predicate Inv(c: Constants, v: Variables)
@@ -271,7 +272,7 @@ module RefinementProof {
 
   lemma InitRefines(c: Constants, v: Variables)
     requires Init(c, v)
-    ensures MapSpec.Init(I(c, v))
+    ensures MapSpec.Init(Abstraction(c, v))
     ensures Inv(c, v)
   {
    // InitAllKeysEmpty(c, v, |c.hosts|);
@@ -285,10 +286,10 @@ module RefinementProof {
     requires (forall j:nat | c.ValidHost(j) && j!=insertHost :: v'.hosts[j] == v.hosts[j]);
     requires Host.Insert(c.hosts[insertHost], v.hosts[insertHost], v'.hosts[insertHost], insertedKey, value)
     ensures Inv(c, v')
-    ensures MapSpec.Next(I(c, v), I(c, v'))
+    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
   {
-    var im := I(c, v).m;
-    var im' := I(c, v').m;
+    var im := Abstraction(c, v).m;
+    var im' := Abstraction(c, v').m;
 
     forall k
       ensures k in im' <==> k in im || k == insertedKey // domain
@@ -307,7 +308,7 @@ module RefinementProof {
       if k in im' {
         if k==insertedKey {
           assert HostHasKey(c, v', insertHost, k);  // trigger
-          assert Ik(c, v', k) == value; // trigger
+          assert Ikey(c, v', k) == value; // trigger
         } else {
           var ihost:nat :| ihost<|c.hosts| && k in v'.hosts[ihost].m;
           assert forall j | c.ValidHost(j) && j!=ihost :: !HostHasKey(c, v, j, k);  // trigger
@@ -318,40 +319,40 @@ module RefinementProof {
       }
     }
 
-    assert MapSpec.InsertOp(I(c, v), I(c, v'), insertedKey, value); // bizarre magic backwards causality-violating trigger
-    assert MapSpec.NextStep(I(c, v), I(c, v'), MapSpec.InsertOpStep(insertedKey, value)); // witness
+    assert MapSpec.InsertOp(Abstraction(c, v), Abstraction(c, v'), insertedKey, value); // bizarre magic backwards causality-violating trigger
+    assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.InsertOpStep(insertedKey, value)); // witness
   }
 
   lemma NextPreservesInvAndRefines(c: Constants, v: Variables, v': Variables)
     requires Inv(c, v)
     requires Next(c, v, v')
     ensures Inv(c, v')
-    ensures MapSpec.Next(I(c, v), I(c, v'))
+    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
   {
     var step :| NextStep(c, v, v', step);
     match step
-      case LocalOpStep(i) => {
-        var hstep :| Host.LocalOpStep(c.hosts[i], v.hosts[i], v'.hosts[i], hstep);
+      case LocalOpStep(idx) => {
+        var hstep :| Host.LocalOpStep(c.hosts[idx], v.hosts[idx], v'.hosts[idx], hstep);
         match hstep
-          case InsertStep(k, value) => InsertPreservesInvAndRefines(c, v, v', i, k, value);
+          case InsertStep(k, value) => InsertPreservesInvAndRefines(c, v, v', idx, k, value);
           case QueryStep(k, output) => {
             assume false;
             assert Inv(c, v');
-            assert I(c, v) == I(c, v');
-            assert MapSpec.Next(I(c, v), I(c, v'));
+            assert Abstraction(c, v) == Abstraction(c, v');
+            assert MapSpec.Next(Abstraction(c, v), Abstraction(c, v'));
           }
           case FillDefaultStep(k) => {
             assume false;
             assert Inv(c, v');
-            assert I(c, v) == I(c, v');
-            assert MapSpec.Next(I(c, v), I(c, v'));
+            assert Abstraction(c, v) == Abstraction(c, v');
+            assert MapSpec.Next(Abstraction(c, v), Abstraction(c, v'));
           }
       }
       case TransmitOpStep(src, dst, message) => {
         assume false;
         assert Inv(c, v');
-        assert I(c, v) == I(c, v');
-        assert MapSpec.Next(I(c, v), I(c, v'));
+        assert Abstraction(c, v) == Abstraction(c, v');
+        assert MapSpec.Next(Abstraction(c, v), Abstraction(c, v'));
       }
   }
 }
