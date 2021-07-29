@@ -1,3 +1,5 @@
+// TODO !!! move this to chapter 7 because it's about refinement
+
 module Types {
   // TODO finite domain of keys so we can use finite-domained maps and avoid manager nonsense
   type Key(==, !new)
@@ -30,198 +32,159 @@ module MapSpec {
 
   datatype Variables = Variables(mapp:map<Key, Value>)
 
-  predicate Init(v_: Variables)
+  predicate Init(v: Variables)
   {
-    v_.mapp == InitialMap()
+    v.mapp == InitialMap()
   }
 
-  predicate InsertOp(v_:Variables, v_':Variables, key:Key, value:Value)
+  predicate InsertOp(v:Variables, v':Variables, key:Key, value:Value)
   {
     && key in AllKeys()
-    && v_'.mapp == v_.mapp[key := value]
+    && v'.mapp == v.mapp[key := value]
   }
 
-  predicate QueryOp(v_:Variables, v_':Variables, key:Key, output:Value)
+  predicate QueryOp(v:Variables, v':Variables, key:Key, output:Value)
   {
     && key in AllKeys()
-    && (output == if key in v_.mapp then v_.mapp[key] else DefaultValue())
-    && v_' == v_  // no change to map state
+    && (output == if key in v.mapp then v.mapp[key] else DefaultValue())
+    && v' == v  // no change to map state
   }
 
   datatype Step =
     | InsertOpStep(key:Key, value:Value)
     | QueryOpStep(key:Key, output:Value)
 
-  predicate NextStep(v_: Variables, v_': Variables, step:Step)
+  predicate NextStep(v: Variables, v': Variables, step:Step)
   {
     match step
-      case InsertOpStep(key, value) => InsertOp(v_, v_', key, value)
-      case QueryOpStep(key, output) => QueryOp(v_, v_', key, output)
+      case InsertOpStep(key, value) => InsertOp(v, v', key, value)
+      case QueryOpStep(key, output) => QueryOp(v, v', key, output)
   }
 
-  predicate Next(v_: Variables, v_': Variables)
+  predicate Next(v: Variables, v': Variables)
   {
-    exists step :: NextStep(v_, v_', step)
+    exists step :: NextStep(v, v', step)
   }
 }
 
 // A "synchronous" KV store (network messages are delivered
 // instantaneously).
 
-module Host {
+module Implementation {
   import opened Types
 
-  datatype Constants = Constants()
-  datatype Variables = Variables(mapp:map<Key, Value>)
-    // if a key is absent, only the manager can spring it
-    // into existence.
+  type HostIdx = nat
 
-  predicate Init(c_: Constants, v_: Variables, hostidx: nat)
+  datatype Constants = Constants(mapCount: nat)
   {
-    && v_.mapp == if hostidx==0 then InitialMap() else map[]
+    predicate WF() { 0 < mapCount }
+    predicate ValidHost(idx: HostIdx) { idx < mapCount }
   }
 
-  predicate Insert(c_: Constants, v_: Variables, v_': Variables, key: Key, value: Value)
+  datatype Variables = Variables(maps:seq<map<Key, Value>>)
   {
-    && key in v_.mapp // this host needs to be authoritative on this key
-    && v_'.mapp == v_.mapp[key := value]
+    predicate WF(c: Constants) { |maps| == c.mapCount }
   }
 
-  predicate Query(c_: Constants, v_: Variables, v_': Variables, key: Key, output: Value)
+  predicate Init(c: Constants, v: Variables)
   {
-    && key in v_.mapp
-    && output == v_.mapp[key]
-    && v_' == v_  // UNCHANGED
+    && v.WF(c)
+    && (forall idx:HostIdx | c.ValidHost(idx) :: v.maps[idx] == if idx==0 then InitialMap() else map[])
   }
 
-  datatype Step =
-    | InsertStep(key: Key, value: Value)
-    | QueryStep(key: Key, output: Value)
-
-  predicate LocalOpStep(c_: Constants, v_: Variables, v_': Variables, step: Step)
+  predicate Insert(c: Constants, v: Variables, v': Variables, idx: HostIdx, key: Key, value: Value)
   {
-    match step
-      case InsertStep(key, value) => Insert(c_, v_, v_', key, value)
-      case QueryStep(key, output) => Query(c_, v_, v_', key, output)
+    && v.WF(c)
+    && c.ValidHost(idx)
+    && key in v.maps[idx] // the participating "host" needs to be authoritative on this key
+    && v'.maps == v.maps[idx := v.maps[idx][key := value]]
   }
 
-  predicate LocalOp(c_: Constants, v_: Variables, v_': Variables)
+  predicate Query(c: Constants, v: Variables, v': Variables, idx: HostIdx, key: Key, output: Value)
   {
-    exists step :: LocalOpStep(c_, v_, v_', step)
+    && v.WF(c)
+    && c.ValidHost(idx)
+    && key in v.maps[idx] // the participating "host" needs to be authoritative on this key
+    && output == v.maps[idx][key]
+    && v' == v  // UNCHANGED
   }
 
-  // A possible enhancement exercise: transfer many key,value pairs in one
-  // message.
-  datatype Message = TransferKey(key: Key, value: Value)
-
-  // System-partial-actions for message transmission.
-  // A matched pair of these happen together atomically, so it's a
-  // "synchronous" message delivery model. (We'll add more realism later.)
-  predicate Send(c_: Constants, v_: Variables, v_': Variables, msg: Message)
+  function {:opaque} MapRemoveOne<K,V>(m:map<K,V>, key:K) : (m':map<K,V>)
+    ensures forall k :: k in m && k != key ==> k in m'
+    ensures forall k :: k in m' ==> k in m && k != key
+    ensures forall j :: j in m' ==> m'[j] == m[j]
+    ensures |m'.Keys| <= |m.Keys|
+    ensures |m'| <= |m|
   {
-    && msg.key in v_.mapp // can only give away what I'mapp authoritative for
-    && v_.mapp[msg.key] == msg.value  // transmit the correct value
-    && v_'.mapp == map key | key in v_.mapp && key!=msg.key :: v_.mapp[key] // forget this key
+    var m':= map j | j in m && j != key :: m[j];
+    assert m'.Keys == m.Keys - {key};
+    m'
   }
 
-  predicate Receive(c_: Constants, v_: Variables, v_': Variables, msg: Message)
+  // A possible enhancement exercise: transfer many key,value pairs in one step
+  predicate Transfer(c: Constants, v: Variables, v': Variables, sendIdx: HostIdx, recvIdx: HostIdx, key: Key, value: Value)
   {
-    && v_'.mapp == v_.mapp[msg.key := msg.value]  // learn the new key,value pair.
-  }
-}
-
-module System {
-  import Host
-
-  datatype Constants = Constants(hosts: seq<Host.Constants>)
-  {
-    predicate WF() { 0 < |hosts| }
-    predicate ValidHost(hostidx: nat) { hostidx < |hosts| }
-  }
-
-  datatype Variables = Variables(hosts: seq<Host.Variables>)
-  {
-    predicate WF(c_: Constants) { |hosts| == |c_.hosts| }
-  }
-  
-  predicate Init(c_: Constants, v_: Variables)
-  {
-    && c_.WF()
-    && v_.WF(c_)
-    && (forall hostidx:nat | c_.ValidHost(hostidx) :: Host.Init(c_.hosts[hostidx], v_.hosts[hostidx], hostidx))
-  }
-
-  predicate LocalOp(c_: Constants, v_: Variables, v_': Variables, hostidx: nat)
-  {
-    && v_.WF(c_)
-    && v_'.WF(c_)
-    && c_.ValidHost(hostidx)
-    && Host.LocalOp(c_.hosts[hostidx], v_.hosts[hostidx], v_'.hosts[hostidx])
-    // all other host state UNCHANGED
-    && (forall otherhost:nat | c_.ValidHost(otherhost) && otherhost!=hostidx :: v_'.hosts[otherhost] == v_.hosts[otherhost])
-  }
-
-  predicate TransmitOp(c_: Constants, v_: Variables, v_': Variables, src: nat, dst: nat, message: Host.Message)
-  {
-    && v_.WF(c_)
-    && v_'.WF(c_)
-    && c_.ValidHost(src)
-    && c_.ValidHost(dst)
-    && Host.Send(c_.hosts[src], v_.hosts[src], v_'.hosts[src], message)
-    && Host.Receive(c_.hosts[dst], v_.hosts[dst], v_'.hosts[dst], message)
-    // all other host state UNCHANGED
-    && (forall otherhost:nat | c_.ValidHost(otherhost) && otherhost!=src && otherhost!=dst
-        :: v_'.hosts[otherhost] == v_.hosts[otherhost])
+    && v.WF(c)
+    && v'.WF(c)
+    && c.ValidHost(sendIdx)
+    && c.ValidHost(recvIdx)
+    && key in v.maps[sendIdx]
+    && v'.maps[sendIdx] == MapRemoveOne(v.maps[sendIdx], key)  // key leaves sending map
+    && v'.maps[recvIdx] == v.maps[recvIdx][key := value]    // key appears in recv map
+    && (forall otherIdx:HostIdx | c.ValidHost(otherIdx) && otherIdx != sendIdx && otherIdx != recvIdx
+        :: v'.maps[otherIdx] == v.maps[otherIdx]) // unchanged other participants
   }
 
   datatype Step =
-    | LocalOpStep(hostidx:nat)
-    | TransmitOpStep(src:nat, dst:nat, message:Host.Message)
+    | InsertStep(idx: HostIdx, key: Key, value: Value)
+    | QueryStep(idx: HostIdx, key: Key, output: Value)
+    | TransferStep(sendIdx: HostIdx, recvIdx: HostIdx, key: Key, value: Value)
 
-  predicate NextStep(c_: Constants, v_: Variables, v_': Variables, step:Step)
+  predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
   {
     match step
-      case LocalOpStep(hostidx) => LocalOp(c_, v_, v_', hostidx)
-      case TransmitOpStep(src, dst, message) => TransmitOp(c_, v_, v_', src, dst, message)
+      case InsertStep(idx, key, value) => Insert(c, v, v', idx, key, value)
+      case QueryStep(idx, key, output) => Query(c, v, v', idx, key, output)
+      case TransferStep(sendIdx, recvIdx, key, value) => Transfer(c, v, v', sendIdx, recvIdx, key, value)
   }
 
-  predicate Next(c_: Constants, v_: Variables, v_': Variables)
+  predicate Next(c: Constants, v: Variables, v': Variables)
   {
-    exists step :: NextStep(c_, v_, v_', step)
+    exists step :: NextStep(c, v, v', step)
   }
 }
 
 module RefinementProof {
   import opened Types
   import MapSpec
-  import opened System
+  import opened Implementation
 
-  predicate HostHasKey(c_: Constants, v_: Variables, hostidx:nat, key:Key)
-    requires v_.WF(c_)
+  predicate HostHasKey(c: Constants, v: Variables, hostidx:HostIdx, key:Key)
+    requires v.WF(c)
   {
-    && c_.ValidHost(hostidx)
-    && key in v_.hosts[hostidx].mapp
+    && c.ValidHost(hostidx)
+    && key in v.maps[hostidx]
   }
 
   // Pulling the choose out into its own function is sometimes necessary due
   // to a (deliberate) stupidity in Dafny: it doesn't treat :| expressions
   // as subsitution-equivalent, even though the are (as evidenced by pulling
   // one into a function).
-  function TheHostWithKey(c_: Constants, v_: Variables, key:Key) : nat
-    requires v_.WF(c_)
-    requires exists hostidx :: HostHasKey(c_, v_, hostidx, key);
+  function TheHostWithKey(c: Constants, v: Variables, key:Key) : HostIdx
+    requires v.WF(c)
+    requires exists hostidx :: HostHasKey(c, v, hostidx, key);
   {
-    var hostidx:nat :| HostHasKey(c_, v_, hostidx, key);
+    var hostidx:HostIdx :| HostHasKey(c, v, hostidx, key);
     hostidx
   }
 
 
-  function AbstractionOneKey(c_: Constants, v_: Variables, key:Key) : Value
-    requires v_.WF(c_)
+  function AbstractionOneKey(c: Constants, v: Variables, key:Key) : Value
+    requires v.WF(c)
   {
-    if exists idx :: HostHasKey(c_, v_, idx, key)
+    if exists idx :: HostHasKey(c, v, idx, key)
     then
-      v_.hosts[TheHostWithKey(c_, v_, key)].mapp[key]
+      v.maps[TheHostWithKey(c, v, key)][key]
     else DefaultValue()
   }
 
@@ -230,103 +193,103 @@ module RefinementProof {
   // is finite for the map comprehension in Abstraction().
   // (An alternative would be to switch to imaps -- maps with potentially-infinite
   // domains -- but that would require making the spec fancier. This was a compromise.)
-  function KnownKeysRecurse(c_: Constants, v_: Variables, count: nat) : set<Key>
-    requires v_.WF(c_)
-    requires count <= |c_.hosts|
+  function KnownKeysRecurse(c: Constants, v: Variables, count: nat) : set<Key>
+    requires v.WF(c)
+    requires count <= c.mapCount
   {
-    if count==0 then {} else KnownKeysRecurse(c_, v_, count-1) + v_.hosts[count-1].mapp.Keys
+    if count==0 then {} else KnownKeysRecurse(c, v, count-1) + v.maps[count-1].Keys
   }
 
-  function KnownKeys(c_: Constants, v_: Variables) : set<Key>
-    requires v_.WF(c_)
+  function KnownKeys(c: Constants, v: Variables) : set<Key>
+    requires v.WF(c)
   {
-    KnownKeysRecurse(c_, v_, |c_.hosts|)
+    KnownKeysRecurse(c, v, c.mapCount)
   }
 
   // Packaged as lemma. Proves trivially as ensures of KnownKeys,
   // but creates a trigger storm.
-  lemma HostKeysSubsetOfKnownKeys(c_: Constants, v_: Variables, count: nat)
-    requires v_.WF(c_)
-    requires count <= |c_.hosts|
-    ensures forall idx | 0 <= idx < count :: v_.hosts[idx].mapp.Keys <= KnownKeysRecurse(c_, v_, count)
+  lemma HostKeysSubsetOfKnownKeys(c: Constants, v: Variables, count: nat)
+    requires v.WF(c)
+    requires count <= c.mapCount
+    ensures forall idx | 0 <= idx < count :: v.maps[idx].Keys <= KnownKeysRecurse(c, v, count)
   {
   }
 
-  function Abstraction(c_: Constants, v_: Variables) : MapSpec.Variables
-    requires v_.WF(c_)
+  function Abstraction(c: Constants, v: Variables) : MapSpec.Variables
+    requires v.WF(c)
   {
-    MapSpec.Variables(map key | key in KnownKeys(c_, v_) :: AbstractionOneKey(c_, v_, key))
+    MapSpec.Variables(map key | key in KnownKeys(c, v) :: AbstractionOneKey(c, v, key))
   }
 
   // This does slow things down quite a bit.
-  predicate {:opaque} KeysHeldUniquely(c_: Constants, v_: Variables)
-    requires v_.WF(c_)
+  predicate {:opaque} KeysHeldUniquely(c: Constants, v: Variables)
+    requires v.WF(c)
   {
-    forall key, hostidx:nat, otherhost:nat
-        | && c_.ValidHost(hostidx) && c_.ValidHost(otherhost)
-          && key in v_.hosts[hostidx].mapp && key in v_.hosts[otherhost].mapp
+    forall key, hostidx:HostIdx, otherhost:HostIdx
+        | && c.ValidHost(hostidx) && c.ValidHost(otherhost)
+          && key in v.maps[hostidx] && key in v.maps[otherhost]
         :: hostidx == otherhost
   }
 
-  predicate Inv(c_: Constants, v_: Variables)
+  predicate Inv(c: Constants, v: Variables)
   {
-    && c_.WF()
-    && v_.WF(c_)
+    && v.WF(c)
     // Every key lives somewhere.
-    && KnownKeys(c_, v_) == Types.AllKeys()
+    && KnownKeys(c, v) == Types.AllKeys()
     // No key lives in two places.
-    && KeysHeldUniquely(c_, v_)
+    && KeysHeldUniquely(c, v)
   }
 
-  lemma InitAllKeysEmpty(c_: Constants, v_: Variables, count: nat)
-    requires Init(c_, v_)
-    requires 0 < count <= |c_.hosts|
-    ensures KnownKeysRecurse(c_, v_, count) == InitialMap().Keys
+  lemma InitAllKeysEmpty(c: Constants, v: Variables, count: nat)
+    requires Init(c, v)
+    requires 0 < count <= c.mapCount
+    ensures KnownKeysRecurse(c, v, count) == InitialMap().Keys
   {
     if count==1 {
-      assert KnownKeysRecurse(c_, v_, count) == v_.hosts[0].mapp.Keys == InitialMap().Keys;
+      assert KnownKeysRecurse(c, v, count) == v.maps[0].Keys == InitialMap().Keys;
     } else {
-      InitAllKeysEmpty(c_, v_, count-1);
+      InitAllKeysEmpty(c, v, count-1);
     }
     
   }
 
-  lemma AllKeysMembership(c_: Constants, v_: Variables, count: nat)
-    requires Inv(c_, v_)
-    requires count <= |c_.hosts|
+  lemma AllKeysMembership(c: Constants, v: Variables, count: nat)
+    requires Inv(c, v)
+    requires count <= c.mapCount
     ensures forall key ::
-      (key in KnownKeysRecurse(c_, v_, count) <==> exists hostidx:nat :: hostidx<count && key in v_.hosts[hostidx].mapp)
+      (key in KnownKeysRecurse(c, v, count) <==> exists hostidx:HostIdx :: hostidx<count && key in v.maps[hostidx])
   {
   }
 
-  lemma InitRefines(c_: Constants, v_: Variables)
-    requires Init(c_, v_)
-    ensures MapSpec.Init(Abstraction(c_, v_))
-    ensures Inv(c_, v_)
+  lemma InitRefines(c: Constants, v: Variables)
+    requires c.WF()
+    requires Init(c, v)
+    ensures MapSpec.Init(Abstraction(c, v))
+    ensures Inv(c, v)
   {
-    InitAllKeysEmpty(c_, v_, |c_.hosts|);
+    InitAllKeysEmpty(c, v, c.mapCount);
     reveal_KeysHeldUniquely();
   }
 
-  lemma InsertPreservesInvAndRefines(c_: Constants, v_: Variables, v_': Variables, insertHost: nat, insertedKey: Key, value: Value)
-    requires Inv(c_, v_)
-    requires Next(c_, v_, v_')
-    requires c_.ValidHost(insertHost)
-    requires (forall otherhost:nat | c_.ValidHost(otherhost) && otherhost!=insertHost :: v_'.hosts[otherhost] == v_.hosts[otherhost]);
-    requires Host.Insert(c_.hosts[insertHost], v_.hosts[insertHost], v_'.hosts[insertHost], insertedKey, value)
-    ensures Inv(c_, v_')
-    ensures MapSpec.Next(Abstraction(c_, v_), Abstraction(c_, v_'))
+  lemma InsertPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, insertHost: HostIdx, insertedKey: Key, value: Value)
+    requires Inv(c, v)
+    requires Next(c, v, v')
+    requires c.ValidHost(insertHost)
+    requires (forall otherhost:HostIdx | c.ValidHost(otherhost) && otherhost!=insertHost :: v'.maps[otherhost] == v.maps[otherhost]);
+    requires Insert(c, v, v', insertHost, insertedKey, value)
+    ensures Inv(c, v')
+    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
   {
-    var abstractMap := Abstraction(c_, v_).mapp;
-    var abstractMap' := Abstraction(c_, v_').mapp;
+    var abstractMap := Abstraction(c, v).mapp;
+    var abstractMap' := Abstraction(c, v').mapp;
 
     forall key
       ensures key in abstractMap' <==> key in abstractMap || key == insertedKey // domain
       ensures key in abstractMap' ==> (abstractMap'[key] == if key==insertedKey then value else abstractMap[key])  // value
     {
       if key == insertedKey {
-        assert key in v_'.hosts[insertHost].mmap;
-        assert v_'.hosts[insertHost].mmap <= abstractMap';
+        assert key in v'.maps[insertHost];
+        assert v'.maps[insertHost].Keys <= abstractMap'.Keys;
         assert key in abstractMap';
       }
       if key in abstractMap {
@@ -337,63 +300,58 @@ module RefinementProof {
           assert key in abstractMap;
         }
 
-  //      AllKeysMembership(c_, v_', |c_.hosts|);
-        // Narrowing the calls to AllKeysMembership(v_) helps z3 save 15s!
-        // (But domain proof can be replaced with just AllKeysMembership(v_);AllKeysMembership(v_') and it'll still work.)
+  //      AllKeysMembership(c, v', c.mapCount);
+        // Narrowing the calls to AllKeysMembership(v) helps z3 save 15s!
+        // (But domain proof can be replaced with just AllKeysMembership(v);AllKeysMembership(v') and it'll still work.)
         if key == insertedKey {
         } else if key in abstractMap' {
-          assert key in abstractMap by { AllKeysMembership(c_, v_, |c_.hosts|); }
+          assert key in abstractMap by { AllKeysMembership(c, v, c.mapCount); }
         } else if key in abstractMap {
-          assert key in abstractMap' by { AllKeysMembership(c_, v_, |c_.hosts|); }
+          assert key in abstractMap' by { AllKeysMembership(c, v, c.mapCount); }
         }
 
         if key in abstractMap' {
           if key==insertedKey {
-            assert HostHasKey(c_, v_', insertHost, key);  // trigger
-            assert AbstractionOneKey(c_, v_', key) == value; // trigger
+            assert HostHasKey(c, v', insertHost, key);  // trigger
+            assert AbstractionOneKey(c, v', key) == value; // trigger
           } else {
-            var ihost:nat :| ihost<|c_.hosts| && key in v_'.hosts[ihost].mapp;
-            assert forall otherhost | c_.ValidHost(otherhost) && otherhost!=ihost :: !HostHasKey(c_, v_, otherhost, key);  // trigger
-            assert HostHasKey(c_, v_', ihost, key) by { AllKeysMembership(c_, v_, |c_.hosts|); }
-            assert TheHostWithKey(c_, v_', key) == ihost; // witness
+            var ihost:HostIdx :| ihost<c.mapCount && key in v'.maps[ihost];
+            assert forall otherhost | c.ValidHost(otherhost) && otherhost!=ihost :: !HostHasKey(c, v, otherhost, key);  // trigger
+            assert HostHasKey(c, v', ihost, key) by { AllKeysMembership(c, v, c.mapCount); }
+            assert TheHostWithKey(c, v', key) == ihost; // witness
             assert abstractMap'[key] == abstractMap[key]; // trigger  // TODO unstable?
           }
         }
       }
     }
 
-    assert MapSpec.InsertOp(Abstraction(c_, v_), Abstraction(c_, v_'), insertedKey, value); // bizarre magic backwards causality-violating trigger
-    assert MapSpec.NextStep(Abstraction(c_, v_), Abstraction(c_, v_'), MapSpec.InsertOpStep(insertedKey, value)); // witness
+    assert MapSpec.InsertOp(Abstraction(c, v), Abstraction(c, v'), insertedKey, value); // bizarre magic backwards causality-violating trigger
+    assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.InsertOpStep(insertedKey, value)); // witness
   }
 
-  lemma NextPreservesInvAndRefines(c_: Constants, v_: Variables, v_': Variables)
-    requires Inv(c_, v_)
-    requires Next(c_, v_, v_')
-    ensures Inv(c_, v_')
-    ensures MapSpec.Next(Abstraction(c_, v_), Abstraction(c_, v_'))
+  lemma NextPreservesInvAndRefines(c: Constants, v: Variables, v': Variables)
+    requires Inv(c, v)
+    requires Next(c, v, v')
+    ensures Inv(c, v')
+    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
   {
-    var step :| NextStep(c_, v_, v_', step);
+    var step :| NextStep(c, v, v', step);
     match step
-      case LocalOpStep(idx) => {
-        var hstep :| Host.LocalOpStep(c_.hosts[idx], v_.hosts[idx], v_'.hosts[idx], hstep);
-        match hstep
-          case InsertStep(key, value) => InsertPreservesInvAndRefines(c_, v_, v_', idx, key, value);
-          case QueryStep(key, output) => {
-            assert v_ == v_'; // weirdly obvious trigger
-            assert Inv(c_, v_') by { reveal_KeysHeldUniquely(); }
-            assert key in KnownKeys(c_, v_) by { HostKeysSubsetOfKnownKeys(c_, v_, |c_.hosts|); }
-            assert output == Abstraction(c_, v_).mapp[key] by {
-              assert HostHasKey(c_, v_, idx, key);  // witness
-              reveal_KeysHeldUniquely();
-            }
-            assert MapSpec.NextStep(Abstraction(c_, v_), Abstraction(c_, v_'), MapSpec.QueryOpStep(key, output)); // witness
-          }
+      case InsertStep(idx, key, value) => {
+        InsertPreservesInvAndRefines(c, v, v', idx, key, value);
       }
-      case TransmitOpStep(src, dst, message) => {
+      case QueryStep(idx, key, output) => {
+        assert v == v'; // weirdly obvious trigger
+        assert Inv(c, v') by { reveal_KeysHeldUniquely(); }
+        assert key in KnownKeys(c, v) by { HostKeysSubsetOfKnownKeys(c, v, c.mapCount); }
+        assert output == Abstraction(c, v).mapp[key] by {
+          assert HostHasKey(c, v, idx, key);  // witness
+          reveal_KeysHeldUniquely();
+        }
+        assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.QueryOpStep(key, output)); // witness
+      }
+      case TransferStep(sendIdx, recvIdx, key, value) => {
         assume false;
-        assert Inv(c_, v_');
-        assert Abstraction(c_, v_) == Abstraction(c_, v_');
-        assert MapSpec.Next(Abstraction(c_, v_), Abstraction(c_, v_'));
       }
   }
 }
