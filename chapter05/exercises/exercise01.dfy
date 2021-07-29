@@ -230,18 +230,26 @@ module RefinementProof {
   // is finite for the map comprehension in Abstraction().
   // (An alternative would be to switch to imaps -- maps with potentially-infinite
   // domains -- but that would require making the spec fancier. This was a compromise.)
-  function AllKeysRecurse(c_: Constants, v_: Variables, count: nat) : set<Key>
+  function KnownKeysRecurse(c_: Constants, v_: Variables, count: nat) : set<Key>
     requires v_.WF(c_)
     requires count <= |c_.hosts|
   {
-    if count==0 then {} else AllKeysRecurse(c_, v_, count-1) + v_.hosts[count-1].mapp.Keys
+    if count==0 then {} else KnownKeysRecurse(c_, v_, count-1) + v_.hosts[count-1].mapp.Keys
   }
 
   function KnownKeys(c_: Constants, v_: Variables) : set<Key>
     requires v_.WF(c_)
-    ensures forall idx | 0 <= idx < |c_.hosts| :: v_.hosts[idx].mapp.Keys <= KnownKeys(c_, v_)
   {
-    AllKeysRecurse(c_, v_, |c_.hosts|)
+    KnownKeysRecurse(c_, v_, |c_.hosts|)
+  }
+
+  // Packaged as lemma. Proves trivially as ensures of KnownKeys,
+  // but creates a trigger storm.
+  lemma HostKeysSubsetOfKnownKeys(c_: Constants, v_: Variables, count: nat)
+    requires v_.WF(c_)
+    requires count <= |c_.hosts|
+    ensures forall idx | 0 <= idx < count :: v_.hosts[idx].mapp.Keys <= KnownKeysRecurse(c_, v_, count)
+  {
   }
 
   function Abstraction(c_: Constants, v_: Variables) : MapSpec.Variables
@@ -250,7 +258,9 @@ module RefinementProof {
     MapSpec.Variables(map key | key in KnownKeys(c_, v_) :: AbstractionOneKey(c_, v_, key))
   }
 
-  predicate KeysHeldUniquely(c_: Constants, v_: Variables)
+  // This does slow things down quite a bit.
+  predicate {:opaque} KeysHeldUniquely(c_: Constants, v_: Variables)
+    requires v_.WF(c_)
   {
     forall key, hostidx:nat, otherhost:nat
         | && c_.ValidHost(hostidx) && c_.ValidHost(otherhost)
@@ -271,10 +281,10 @@ module RefinementProof {
   lemma InitAllKeysEmpty(c_: Constants, v_: Variables, count: nat)
     requires Init(c_, v_)
     requires 0 < count <= |c_.hosts|
-    ensures AllKeysRecurse(c_, v_, count) == InitialMap().Keys
+    ensures KnownKeysRecurse(c_, v_, count) == InitialMap().Keys
   {
     if count==1 {
-      assert AllKeysRecurse(c_, v_, count) == v_.hosts[0].mapp.Keys == InitialMap().Keys;
+      assert KnownKeysRecurse(c_, v_, count) == v_.hosts[0].mapp.Keys == InitialMap().Keys;
     } else {
       InitAllKeysEmpty(c_, v_, count-1);
     }
@@ -285,7 +295,7 @@ module RefinementProof {
     requires Inv(c_, v_)
     requires count <= |c_.hosts|
     ensures forall key ::
-      (key in AllKeysRecurse(c_, v_, count) <==> exists hostidx:nat :: hostidx<count && key in v_.hosts[hostidx].mapp)
+      (key in KnownKeysRecurse(c_, v_, count) <==> exists hostidx:nat :: hostidx<count && key in v_.hosts[hostidx].mapp)
   {
   }
 
@@ -295,7 +305,7 @@ module RefinementProof {
     ensures Inv(c_, v_)
   {
     InitAllKeysEmpty(c_, v_, |c_.hosts|);
-    AllKeysMembership(c_, v_, |c_.hosts|);
+    reveal_KeysHeldUniquely();
   }
 
   lemma InsertPreservesInvAndRefines(c_: Constants, v_: Variables, v_': Variables, insertHost: nat, insertedKey: Key, value: Value)
@@ -314,26 +324,40 @@ module RefinementProof {
       ensures key in abstractMap' <==> key in abstractMap || key == insertedKey // domain
       ensures key in abstractMap' ==> (abstractMap'[key] == if key==insertedKey then value else abstractMap[key])  // value
     {
-      AllKeysMembership(c_, v_', |c_.hosts|);
-      // Narrowing the calls to AllKeysMembership(v_) helps z3 save 15s!
-      // (But domain proof can be replaced with just AllKeysMembership(v_);AllKeysMembership(v_') and it'll still work.)
       if key == insertedKey {
-      } else if key in abstractMap' {
-        assert key in abstractMap by { AllKeysMembership(c_, v_, |c_.hosts|); }
-      } else if key in abstractMap {
-        assert key in abstractMap' by { AllKeysMembership(c_, v_, |c_.hosts|); }
+        assert key in v_'.hosts[insertHost].mmap;
+        assert v_'.hosts[insertHost].mmap <= abstractMap';
+        assert key in abstractMap';
       }
-
+      if key in abstractMap {
+        assert key in abstractMap';
+      }
       if key in abstractMap' {
-        if key==insertedKey {
-          assert HostHasKey(c_, v_', insertHost, key);  // trigger
-          assert AbstractionOneKey(c_, v_', key) == value; // trigger
-        } else {
-          var ihost:nat :| ihost<|c_.hosts| && key in v_'.hosts[ihost].mapp;
-          assert forall otherhost | c_.ValidHost(otherhost) && otherhost!=ihost :: !HostHasKey(c_, v_, otherhost, key);  // trigger
-          assert HostHasKey(c_, v_', ihost, key) by { AllKeysMembership(c_, v_, |c_.hosts|); }
-          assert TheHostWithKey(c_, v_', key) == ihost; // witness
-          assert abstractMap'[key] == abstractMap[key]; // trigger  // TODO unstable?
+        if key != insertedKey {
+          assert key in abstractMap;
+        }
+
+  //      AllKeysMembership(c_, v_', |c_.hosts|);
+        // Narrowing the calls to AllKeysMembership(v_) helps z3 save 15s!
+        // (But domain proof can be replaced with just AllKeysMembership(v_);AllKeysMembership(v_') and it'll still work.)
+        if key == insertedKey {
+        } else if key in abstractMap' {
+          assert key in abstractMap by { AllKeysMembership(c_, v_, |c_.hosts|); }
+        } else if key in abstractMap {
+          assert key in abstractMap' by { AllKeysMembership(c_, v_, |c_.hosts|); }
+        }
+
+        if key in abstractMap' {
+          if key==insertedKey {
+            assert HostHasKey(c_, v_', insertHost, key);  // trigger
+            assert AbstractionOneKey(c_, v_', key) == value; // trigger
+          } else {
+            var ihost:nat :| ihost<|c_.hosts| && key in v_'.hosts[ihost].mapp;
+            assert forall otherhost | c_.ValidHost(otherhost) && otherhost!=ihost :: !HostHasKey(c_, v_, otherhost, key);  // trigger
+            assert HostHasKey(c_, v_', ihost, key) by { AllKeysMembership(c_, v_, |c_.hosts|); }
+            assert TheHostWithKey(c_, v_', key) == ihost; // witness
+            assert abstractMap'[key] == abstractMap[key]; // trigger  // TODO unstable?
+          }
         }
       }
     }
@@ -355,19 +379,14 @@ module RefinementProof {
         match hstep
           case InsertStep(key, value) => InsertPreservesInvAndRefines(c_, v_, v_', idx, key, value);
           case QueryStep(key, output) => {
-            forall key ensures key in Types.AllKeys() <==> key in KnownKeys(c_, v_') {
-            }
-            assert Inv(c_, v_');
             assert v_ == v_'; // weirdly obvious trigger
-            assert Abstraction(c_, v_) == Abstraction(c_, v_');
-            assert Abstraction(c_, v_).mapp.Keys == Types.AllKeys();
-            assert key in v_.hosts[idx].mapp.Keys;
-            assert key in KnownKeys(c_, v_);
-            assert key in Types.AllKeys();
-            assert output == Abstraction(c_, v_).mapp[key];
-            assert MapSpec.QueryOp(Abstraction(c_, v_), Abstraction(c_, v_'), key, output);
-            assert MapSpec.NextStep(Abstraction(c_, v_), Abstraction(c_, v_'), MapSpec.QueryOpStep(key, output));
-            assert MapSpec.Next(Abstraction(c_, v_), Abstraction(c_, v_'));
+            assert Inv(c_, v_') by { reveal_KeysHeldUniquely(); }
+            assert key in KnownKeys(c_, v_) by { HostKeysSubsetOfKnownKeys(c_, v_, |c_.hosts|); }
+            assert output == Abstraction(c_, v_).mapp[key] by {
+              assert HostHasKey(c_, v_, idx, key);  // witness
+              reveal_KeysHeldUniquely();
+            }
+            assert MapSpec.NextStep(Abstraction(c_, v_), Abstraction(c_, v_'), MapSpec.QueryOpStep(key, output)); // witness
           }
       }
       case TransmitOpStep(src, dst, message) => {
