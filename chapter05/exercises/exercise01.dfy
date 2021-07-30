@@ -188,22 +188,35 @@ module RefinementProof {
     else DefaultValue()
   }
 
-  // We recursively construct the finite set of possible map keys here, all
+  // We construct the finite set of possible map keys here, all
   // because we need to supply Dafny with simple evidence that our map domain
   // is finite for the map comprehension in Abstraction().
   // (An alternative would be to switch to imaps -- maps with potentially-infinite
   // domains -- but that would require making the spec fancier. This was a compromise.)
-  function KnownKeysRecurse(c: Constants, v: Variables, count: nat) : set<Key>
-    requires v.WF(c)
-    requires count <= c.mapCount
+
+  // put into library
+  function DropLast<T>(theSeq: seq<T>) : seq<T>
+    requires 0 < |theSeq|
   {
-    if count==0 then {} else KnownKeysRecurse(c, v, count-1) + v.maps[count-1].Keys
+    theSeq[..|theSeq|-1]
+  }
+
+  function Last<T>(theSeq: seq<T>) : T
+    requires 0 < |theSeq|
+  {
+    theSeq[|theSeq|-1]
+  }
+
+  function UnionSeqOfSets<T>(theSets: seq<set<T>>) : set<T>
+  {
+    if |theSets| == 0 then {} else
+      UnionSeqOfSets(DropLast(theSets)) + Last(theSets)
   }
 
   function KnownKeys(c: Constants, v: Variables) : set<Key>
     requires v.WF(c)
   {
-    KnownKeysRecurse(c, v, c.mapCount)
+    UnionSeqOfSets(seq(c.mapCount, i requires 0<=i<c.mapCount => v.maps[i].Keys))
   }
 
   // Packaged as lemma. Proves trivially as ensures of KnownKeys,
@@ -211,7 +224,7 @@ module RefinementProof {
   lemma HostKeysSubsetOfKnownKeys(c: Constants, v: Variables, count: nat)
     requires v.WF(c)
     requires count <= c.mapCount
-    ensures forall idx | 0 <= idx < count :: v.maps[idx].Keys <= KnownKeysRecurse(c, v, count)
+    ensures forall idx | 0 <= idx < count :: v.maps[idx].Keys <= KnownKeys(c, v)
   {
   }
 
@@ -243,21 +256,24 @@ module RefinementProof {
   lemma InitAllKeysEmpty(c: Constants, v: Variables, count: nat)
     requires Init(c, v)
     requires 0 < count <= c.mapCount
-    ensures KnownKeysRecurse(c, v, count) == InitialMap().Keys
+    ensures KnownKeys(c, v) == AllKeys()
   {
-    if count==1 {
-      assert KnownKeysRecurse(c, v, count) == v.maps[0].Keys == InitialMap().Keys;
-    } else {
-      InitAllKeysEmpty(c, v, count-1);
+    forall key | key in KnownKeys(c, v) ensures key in AllKeys() {
+      var idx :| key in v.maps[idx].Keys;
+      assert v.maps[idx].Keys <= AllKeys();
+      assert key in AllKeys();
     }
-    
+    forall key | key in AllKeys() ensures key in KnownKeys(c, v) {
+      assert key in v.maps[0].Keys;
+      assert v.maps[0].Keys <= KnownKeys(c, v);
+    }
   }
 
   lemma AllKeysMembership(c: Constants, v: Variables, count: nat)
     requires Inv(c, v)
     requires count <= c.mapCount
     ensures forall key ::
-      (key in KnownKeysRecurse(c, v, count) <==> exists hostidx:HostIdx :: hostidx<count && key in v.maps[hostidx])
+      (key in KnownKeys(c, v) <==> exists hostidx:HostIdx :: hostidx<count && key in v.maps[hostidx])
   {
   }
 
