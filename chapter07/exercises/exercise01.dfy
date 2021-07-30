@@ -1,4 +1,4 @@
-// TODO !!! move this to chapter 7 because it's about refinement
+include "library.dfy"
 
 module Types {
   // TODO finite domain of keys so we can use finite-domained maps and avoid manager nonsense
@@ -53,12 +53,14 @@ module MapSpec {
   datatype Step =
     | InsertOpStep(key:Key, value:Value)
     | QueryOpStep(key:Key, output:Value)
+    | NoOpStep()
 
   predicate NextStep(v: Variables, v': Variables, step:Step)
   {
     match step
       case InsertOpStep(key, value) => InsertOp(v, v', key, value)
       case QueryOpStep(key, output) => QueryOp(v, v', key, output)
+      case NoOpStep => v' == v
   }
 
   predicate Next(v: Variables, v': Variables)
@@ -97,6 +99,7 @@ module Implementation {
     && v.WF(c)
     && c.ValidHost(idx)
     && key in v.maps[idx] // the participating "host" needs to be authoritative on this key
+    //&& key in AllKeys() // implied by previous conjunct + Inv()ariant
     && v'.maps == v.maps[idx := v.maps[idx][key := value]]
   }
 
@@ -155,6 +158,7 @@ module Implementation {
 }
 
 module RefinementProof {
+  import opened Library
   import opened Types
   import MapSpec
   import opened Implementation
@@ -194,29 +198,18 @@ module RefinementProof {
   // (An alternative would be to switch to imaps -- maps with potentially-infinite
   // domains -- but that would require making the spec fancier. This was a compromise.)
 
-  // put into library
-  function DropLast<T>(theSeq: seq<T>) : seq<T>
-    requires 0 < |theSeq|
+  // The sequence of map domains. Pulled out into its own function to
+  // make proof assertions easy to write.
+  function MapDomains(c: Constants, v: Variables) : seq<set<Key>>
+    requires v.WF(c)
   {
-    theSeq[..|theSeq|-1]
-  }
-
-  function Last<T>(theSeq: seq<T>) : T
-    requires 0 < |theSeq|
-  {
-    theSeq[|theSeq|-1]
-  }
-
-  function UnionSeqOfSets<T>(theSets: seq<set<T>>) : set<T>
-  {
-    if |theSets| == 0 then {} else
-      UnionSeqOfSets(DropLast(theSets)) + Last(theSets)
+    seq(c.mapCount, i requires 0<=i<c.mapCount => v.maps[i].Keys)
   }
 
   function KnownKeys(c: Constants, v: Variables) : set<Key>
     requires v.WF(c)
   {
-    UnionSeqOfSets(seq(c.mapCount, i requires 0<=i<c.mapCount => v.maps[i].Keys))
+    UnionSeqOfSets(MapDomains(c, v))
   }
 
   // Packaged as lemma. Proves trivially as ensures of KnownKeys,
@@ -226,6 +219,11 @@ module RefinementProof {
     requires count <= c.mapCount
     ensures forall idx | 0 <= idx < count :: v.maps[idx].Keys <= KnownKeys(c, v)
   {
+    forall idx | 0 <= idx < count ensures v.maps[idx].Keys <= KnownKeys(c, v)
+    {
+      SetsAreSubsetsOfUnion(MapDomains(c, v));
+      assert v.maps[idx].Keys == MapDomains(c, v)[idx];  // trigger
+    }
   }
 
   function Abstraction(c: Constants, v: Variables) : MapSpec.Variables
@@ -258,23 +256,39 @@ module RefinementProof {
     requires 0 < count <= c.mapCount
     ensures KnownKeys(c, v) == AllKeys()
   {
-    forall key | key in KnownKeys(c, v) ensures key in AllKeys() {
-      var idx :| key in v.maps[idx].Keys;
-      assert v.maps[idx].Keys <= AllKeys();
-      assert key in AllKeys();
-    }
+    EachUnionMemberBelongsToASet(MapDomains(c, v));
+    SetsAreSubsetsOfUnion(MapDomains(c, v));
     forall key | key in AllKeys() ensures key in KnownKeys(c, v) {
-      assert key in v.maps[0].Keys;
-      assert v.maps[0].Keys <= KnownKeys(c, v);
+      assert key in MapDomains(c,v)[0]; // trigger
     }
   }
 
-  lemma AllKeysMembership(c: Constants, v: Variables, count: nat)
+  lemma AllKeysMembership(c: Constants, v: Variables)
     requires Inv(c, v)
-    requires count <= c.mapCount
     ensures forall key ::
-      (key in KnownKeys(c, v) <==> exists hostidx:HostIdx :: hostidx<count && key in v.maps[hostidx])
+      (key in KnownKeys(c, v) <==> exists hostidx:HostIdx :: hostidx<c.mapCount && key in v.maps[hostidx])
   {
+    var count := c.mapCount;
+    forall key
+      | key in KnownKeys(c, v)
+      ensures exists hostidx:HostIdx :: hostidx<count && key in v.maps[hostidx]
+    {
+      EachUnionMemberBelongsToASet(MapDomains(c, v));
+      var idx :| 0<=idx<|MapDomains(c, v)| && key in MapDomains(c, v)[idx];
+      assert count == |MapDomains(c, v)|;
+      assert v.maps[idx].Keys == MapDomains(c,v)[idx];
+      assert idx<count && key in v.maps[idx]; // trigger
+    }
+    forall key
+      | exists hostidx:HostIdx :: hostidx<count && key in v.maps[hostidx]
+      ensures key in KnownKeys(c, v)
+    {
+      var hostidx:HostIdx :| hostidx<count && key in v.maps[hostidx];
+      SetsAreSubsetsOfUnion(MapDomains(c, v));
+      assert key in MapDomains(c, v)[hostidx];
+      assert MapDomains(c, v)[hostidx] <= KnownKeys(c, v);
+      assert key in KnownKeys(c, v);
+    }
   }
 
   lemma InitRefines(c: Constants, v: Variables)
@@ -287,11 +301,19 @@ module RefinementProof {
     reveal_KeysHeldUniquely();
   }
 
+  lemma ThisIsTheHost(c: Constants, v: Variables, hostidx:HostIdx, key:Key)
+    requires v.WF(c)
+    requires KeysHeldUniquely(c, v)
+    requires HostHasKey(c, v, hostidx, key)
+    ensures TheHostWithKey(c, v, key) == hostidx
+  {
+    reveal_KeysHeldUniquely();
+  }
+
   lemma InsertPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, insertHost: HostIdx, insertedKey: Key, value: Value)
     requires Inv(c, v)
     requires Next(c, v, v')
     requires c.ValidHost(insertHost)
-    requires (forall otherhost:HostIdx | c.ValidHost(otherhost) && otherhost!=insertHost :: v'.maps[otherhost] == v.maps[otherhost]);
     requires Insert(c, v, v', insertHost, insertedKey, value)
     ensures Inv(c, v')
     ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
@@ -299,50 +321,126 @@ module RefinementProof {
     var abstractMap := Abstraction(c, v).mapp;
     var abstractMap' := Abstraction(c, v').mapp;
 
+    assert insertedKey in AllKeys() by {
+      SetsAreSubsetsOfUnion(MapDomains(c, v));
+      assert MapDomains(c, v)[insertHost] == v.maps[insertHost].Keys; //trigger
+    }
+
+    assert KeysHeldUniquely(c, v') by { reveal_KeysHeldUniquely(); }
+
     forall key
       ensures key in abstractMap' <==> key in abstractMap || key == insertedKey // domain
       ensures key in abstractMap' ==> (abstractMap'[key] == if key==insertedKey then value else abstractMap[key])  // value
     {
       if key == insertedKey {
-        assert key in v'.maps[insertHost];
-        assert v'.maps[insertHost].Keys <= abstractMap'.Keys;
-        assert key in abstractMap';
+        SetsAreSubsetsOfUnion(MapDomains(c, v'));
+        assert MapDomains(c, v')[insertHost] <= KnownKeys(c, v'); // trigger
+        assert key in abstractMap'; // case goal
       }
       if key in abstractMap {
-        assert key in abstractMap';
+        var idx := GetIndexForMember(MapDomains(c, v), key);
+        assert MapDomains(c, v')[idx] <= KnownKeys(c, v') by {
+          // The lemma below is a trigger-trap danger (causes timeouts), so I'm
+          // careful to only call it tucked way into this by clause.
+          SetsAreSubsetsOfUnion(MapDomains(c, v'));
+        }
+        assert key in abstractMap'; // case goal
       }
       if key in abstractMap' {
-        if key != insertedKey {
-          assert key in abstractMap;
-        }
-
-  //      AllKeysMembership(c, v', c.mapCount);
-        // Narrowing the calls to AllKeysMembership(v) helps z3 save 15s!
-        // (But domain proof can be replaced with just AllKeysMembership(v);AllKeysMembership(v') and it'll still work.)
         if key == insertedKey {
-        } else if key in abstractMap' {
-          assert key in abstractMap by { AllKeysMembership(c, v, c.mapCount); }
-        } else if key in abstractMap {
-          assert key in abstractMap' by { AllKeysMembership(c, v, c.mapCount); }
-        }
-
-        if key in abstractMap' {
-          if key==insertedKey {
-            assert HostHasKey(c, v', insertHost, key);  // trigger
-            assert AbstractionOneKey(c, v', key) == value; // trigger
-          } else {
-            var ihost:HostIdx :| ihost<c.mapCount && key in v'.maps[ihost];
-            assert forall otherhost | c.ValidHost(otherhost) && otherhost!=ihost :: !HostHasKey(c, v, otherhost, key);  // trigger
-            assert HostHasKey(c, v', ihost, key) by { AllKeysMembership(c, v, c.mapCount); }
-            assert TheHostWithKey(c, v', key) == ihost; // witness
-            assert abstractMap'[key] == abstractMap[key]; // trigger  // TODO unstable?
+          ThisIsTheHost(c, v', insertHost, key);
+          assert abstractMap'[key] == value;  // case goal
+        } else {
+          var keyIdx := GetIndexForMember(MapDomains(c, v'), key);
+          ThisIsTheHost(c, v', keyIdx, key);
+          ThisIsTheHost(c, v, keyIdx, key);
+          assert key in abstractMap by {
+            SetsAreSubsetsOfUnion(MapDomains(c, v));
+            assert MapDomains(c, v)[keyIdx] <= KnownKeys(c, v);  // trigger
           }
+          assert abstractMap'[key] == abstractMap[key]; // case goal
         }
       }
     }
 
-    assert MapSpec.InsertOp(Abstraction(c, v), Abstraction(c, v'), insertedKey, value); // bizarre magic backwards causality-violating trigger
+    assert KnownKeys(c, v') == Types.AllKeys() by {
+      assert abstractMap'.Keys == KnownKeys(c, v'); // trigger
+    }
     assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.InsertOpStep(insertedKey, value)); // witness
+  }
+
+  lemma TransferPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, sendIdx: HostIdx, recvIdx: HostIdx, sentKey: Key, value: Value)
+    requires Inv(c, v)
+    requires Next(c, v, v')
+    requires c.ValidHost(sendIdx)
+    requires c.ValidHost(recvIdx)
+    requires Transfer(c, v, v', sendIdx, recvIdx, sentKey, value)
+    ensures Inv(c, v')
+    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
+  {
+    // domain preserved
+    forall key
+      ensures key in Abstraction(c, v).mapp <==> key in Abstraction(c, v').mapp
+    {
+      var idx;
+      if key in Abstraction(c, v).mapp {
+        SetsAreSubsetsOfUnion(MapDomains(c, v'));
+        if key==sentKey {
+          idx := recvIdx;
+        }
+        else {
+          idx := GetIndexForMember(MapDomains(c, v), key);
+        }
+        assert MapDomains(c, v')[idx] <= KnownKeys(c, v');  // trigger
+        assert key in Abstraction(c, v').mapp;  // case goal
+      }
+      if key in Abstraction(c, v').mapp {
+        SetsAreSubsetsOfUnion(MapDomains(c, v));
+        if key==sentKey {
+          idx := sendIdx;
+        }
+        else {
+          idx := GetIndexForMember(MapDomains(c, v'), key);
+        }
+        assert MapDomains(c, v)[idx] <= KnownKeys(c, v);  // trigger
+        assert key in Abstraction(c, v).mapp;  // case goal
+      }
+    }
+
+    // values preserved
+    forall key | key in Abstraction(c, v).mapp
+      ensures Abstraction(c, v).mapp[key] == Abstraction(c, v').mapp[key]
+    {
+      var idx;
+      var idx';
+      if key == sentKey {
+        idx := sendIdx;
+        idx' := recvIdx;
+        assert v'.maps[idx'][key] == v.maps[idx][key];
+      } else {
+        idx := GetIndexForMember(MapDomains(c, v), key);
+        idx' := idx;
+        assert v'.maps[idx'][key] == v.maps[idx][key];
+      }
+
+      calc {
+        Abstraction(c, v').mapp[key];
+        v'.maps[idx'][key];
+        v.maps[idx][key];
+        Abstraction(c, v).mapp[key];
+      }
+
+      assert Abstraction(c, v').mapp[key] == Abstraction(c, v).mapp[key];
+    }
+
+    assert KnownKeys(c, v') == Types.AllKeys() by {
+      assert KnownKeys(c, v') == Abstraction(c, v').mapp.Keys;
+      assert KnownKeys(c, v) == Abstraction(c, v).mapp.Keys;
+      assert KnownKeys(c, v) == Types.AllKeys();
+    }
+    assert KeysHeldUniquely(c, v') by { reveal_KeysHeldUniquely(); }
+//    assert Abstraction(c, v) == Abstraction(c, v'); // goal
+    assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.NoOpStep); // witness
   }
 
   lemma NextPreservesInvAndRefines(c: Constants, v: Variables, v': Variables)
@@ -367,7 +465,7 @@ module RefinementProof {
         assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.QueryOpStep(key, output)); // witness
       }
       case TransferStep(sendIdx, recvIdx, key, value) => {
-        assume false;
+        TransferPreservesInvAndRefines(c, v, v', sendIdx, recvIdx, key, value);
       }
   }
 }
