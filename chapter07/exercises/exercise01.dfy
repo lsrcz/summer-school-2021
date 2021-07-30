@@ -132,6 +132,7 @@ module Implementation {
     && c.ValidHost(sendIdx)
     && c.ValidHost(recvIdx)
     && key in v.maps[sendIdx]
+    && v.maps[sendIdx][key] == value
     && v'.maps[sendIdx] == MapRemoveOne(v.maps[sendIdx], key)  // key leaves sending map
     && v'.maps[recvIdx] == v.maps[recvIdx][key := value]    // key appears in recv map
     && (forall otherIdx:HostIdx | c.ValidHost(otherIdx) && otherIdx != sendIdx && otherIdx != recvIdx
@@ -407,39 +408,32 @@ module RefinementProof {
       }
     }
 
+    assert KeysHeldUniquely(c, v') by { reveal_KeysHeldUniquely(); }
+
     // values preserved
     forall key | key in Abstraction(c, v).mapp
       ensures Abstraction(c, v).mapp[key] == Abstraction(c, v').mapp[key]
     {
-      var idx;
-      var idx';
+      // identify where to find key in the old & new worlds
+      var idx, idx';
       if key == sentKey {
         idx := sendIdx;
         idx' := recvIdx;
-        assert v'.maps[idx'][key] == v.maps[idx][key];
       } else {
         idx := GetIndexForMember(MapDomains(c, v), key);
         idx' := idx;
-        assert v'.maps[idx'][key] == v.maps[idx][key];
       }
+//      assert v'.maps[idx'][key] == v.maps[idx][key];  // hey look same values
 
-      calc {
-        Abstraction(c, v').mapp[key];
-        v'.maps[idx'][key];
-        v.maps[idx][key];
-        Abstraction(c, v).mapp[key];
-      }
-
-      assert Abstraction(c, v').mapp[key] == Abstraction(c, v).mapp[key];
+      // Tie from particular map up to abstraction
+      ThisIsTheHost(c, v', idx', key);
+      ThisIsTheHost(c, v, idx, key);
     }
 
     assert KnownKeys(c, v') == Types.AllKeys() by {
-      assert KnownKeys(c, v') == Abstraction(c, v').mapp.Keys;
-      assert KnownKeys(c, v) == Abstraction(c, v).mapp.Keys;
-      assert KnownKeys(c, v) == Types.AllKeys();
+      assert KnownKeys(c, v') == Abstraction(c, v').mapp.Keys;  // trigger
+      assert KnownKeys(c, v) == Abstraction(c, v).mapp.Keys;    // trigger
     }
-    assert KeysHeldUniquely(c, v') by { reveal_KeysHeldUniquely(); }
-//    assert Abstraction(c, v) == Abstraction(c, v'); // goal
     assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.NoOpStep); // witness
   }
 
