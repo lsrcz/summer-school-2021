@@ -132,6 +132,14 @@ module Host {
     && msgOps.send.None?
   }
 
+  predicate Init(c: Constants, v: Variables)
+  {
+    && v.proposed.None?
+    && v.leader.None?
+    && !v.hasLead
+    && v.locks == {}
+  }
+
   // JayNF
   datatype Step =
     | SendProposeReqStep
@@ -211,6 +219,14 @@ module DistributedSystem {
     }
   }
 
+  predicate Init(c: Constants, v: Variables)
+  {
+    && c.WF()
+    && v.WF(c)
+    && (forall idx:nat | c.ValidHostId(idx) :: Host.Init(c.hosts[idx], v.hosts[idx]))
+  }
+
+  // JayNF is pretty simple here since only one transition disjunct at this level.
   datatype Step = Step(idx: HostId, msgOps: MessageOps)
 
   predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
