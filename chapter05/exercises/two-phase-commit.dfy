@@ -100,6 +100,7 @@ module Host {
     && recvMsg.accept == false  // and it's a nak
     && v.proposed == Some(c.id) // and I have actually proposed
     && !recvMsg.accept  // and sender is aborting.
+    && v' == v
     && msgOps.send == Some(AbortMsg(c.id)) // hasLead stays true, so I'll never try again
   }
 
@@ -183,6 +184,10 @@ module Network {
   // also doubles as how multiple parties can hear the message.)
   datatype Variables = Variables(sentMsgs:set<Message>)
 
+  predicate Init(c: Constants, v: Variables)
+  {
+    && v.sentMsgs == {}
+  }
 
   predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
@@ -224,6 +229,7 @@ module DistributedSystem {
     && c.WF()
     && v.WF(c)
     && (forall idx:nat | c.ValidHostId(idx) :: Host.Init(c.hosts[idx], v.hosts[idx]))
+    && Network.Init(c.network, v.network)
   }
 
   // JayNF is pretty simple here since only one transition disjunct at this level.
@@ -239,7 +245,7 @@ module DistributedSystem {
     && c.ValidHostId(idx)
     && Host.Next(c.hosts[idx], v.hosts[idx], v'.hosts[idx], step.msgOps)
     // all other hosts UNCHANGED
-    && (forall otherIdx | c.ValidHostId(otherIdx) && otherIdx != idx :: v'.hosts[idx] == v.hosts[idx])
+    && (forall otherIdx:nat | c.ValidHostId(otherIdx) && otherIdx != idx :: v'.hosts[otherIdx] == v.hosts[otherIdx])
     // network agrees recv has been sent and records sent
     && Network.Next(c.network, v.network, v'.network, step.msgOps)
   }
@@ -266,11 +272,26 @@ module Proof {
         && v.hosts[hostb].leader.Some?
       :: v.hosts[hosta].leader == v.hosts[hostb].leader)
   }
+
+  predicate NoConflictingCommitMsgs(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    && (forall msga, msgb
+      |
+        && msga in v.network.sentMsgs
+        && msgb in v.network.sentMsgs
+        && msga.CommitMsg?
+        && msgb.CommitMsg?
+      :: msga.leader == msgb.leader
+      )
+  }
   
   predicate Inv(c: Constants, v: Variables)
   {
     && c.WF()
     && v.WF(c)
+    && NoConflictingCommitMsgs(c, v)
     && Safety(c, v)
   }
 
@@ -278,6 +299,11 @@ module Proof {
     requires Init(c, v)
     ensures Inv(c, v)
   {
+    assert NoConflictingCommitMsgs(c, v) by {
+    }
+
+    assert Safety(c, v) by {
+    }
   }
 
   lemma InvIndunctive(c: Constants, v: Variables, v': Variables)
@@ -285,6 +311,33 @@ module Proof {
     requires Next(c, v, v')
     ensures Inv(c, v')
   {
+    assert NoConflictingCommitMsgs(c, v') by {
+      assume false;
+    }
+
+    assert Safety(c, v') by {
+      forall hosta:nat, hostb:nat
+        |
+          && c.ValidHostId(hosta)
+          && c.ValidHostId(hostb)
+          && v'.hosts[hosta].leader.Some?
+          && v'.hosts[hostb].leader.Some?
+        ensures v'.hosts[hosta].leader == v'.hosts[hostb].leader
+      {
+        var step :| NextStep(c, v, v', step);
+        var idx := step.idx;
+        var hoststep :| Host.NextStep(c.hosts[idx], v.hosts[idx], v'.hosts[idx], hoststep, step.msgOps);
+
+        if hoststep.RecvCommitStep? {
+          // only interesting case.
+          assert v'.hosts[hosta].leader == v'.hosts[hostb].leader;
+        } else {
+          assert v'.hosts[hosta].leader == v.hosts[hosta].leader;
+          assert v'.hosts[hostb].leader == v.hosts[hostb].leader;
+          assert v'.hosts[hosta].leader == v'.hosts[hostb].leader;
+        }
+      }
+    }
   }
 
   lemma InvImpliesSafety(c: Constants, v: Variables)
