@@ -1,4 +1,4 @@
-include "library.dfy"
+include "../../library/library.dfy"
 
 module Types {
   // TODO finite domain of keys so we can use finite-domained maps and avoid manager nonsense
