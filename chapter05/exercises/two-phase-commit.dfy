@@ -4,12 +4,32 @@
 
 include "../../library/library.dfy"
 
+// Player 2
 module Types {
   type HostId = nat
+
+  // Have to define our message datatype so network can refer to it.
+  // (There are cleverer ways to parameterize the network module, but
+  // we're trying to avoid getting fancy with the Dafny module system.)
+  datatype Message =
+    | ProposeReqMsg(leader: nat)   // from leader
+    | ProposeAckMsg(leader:nat, follower: nat, accept: bool) // from follower
+    | AbortMsg(leader: nat)        // from leader
+    | CommitMsg(leader: nat)       // from leader
 }
 
+// Player 1
+module NetIfc {
+  import opened Library
+  import opened Types
+  datatype MessageOps = MessageOps(recv:Option<Message>, send:Option<Message>)
+}
+
+// Player 2
 module Host {
   import opened Types
+  import opened Library
+  import opened NetIfc
 
   datatype Constants = Constants(id: HostId, hostCount: nat)
   datatype Variables = Variables(
@@ -22,14 +42,7 @@ module Host {
     locks: set<HostId>        // who has acked my proposal
     )
 
-
-  datatype Message =
-    | ProposeReqMsg(leader: nat)   // from leader
-    | ProposeAckMsg(leader:nat, follower: nat, accept: bool) // from follower
-    | AbortMsg(leader: nat)        // from leader
-    | CommitMsg(leader: nat)       // from leader
-  
-  predicate SendProposeReq(c: Constants, v: Variables, v': Variables)
+  predicate SendProposeReq(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
     // Can't start the protocol if
     // * we already started a protocol (and may even have aborted, so
@@ -40,35 +53,37 @@ module Host {
     && v.proposed.None?
     && v.leader.None?
     // Propose that I should lead.
-    && sendMessages == { ProposeReqMsg(c.id) }
+    && msgOps == MessageOps(None, Some(ProposeReqMsg(c.id)))
     // I could record my proposal right now, but I'll just observe
     // my own message.
-    && v' == v.(proposed := true)
+    && v' == v.(hasLead := true)
   }
 
   // acceptor decides what to do with the proposal.
-  predicate SendProposeAck(c: Constants, v: Variables, v': Variables)
+  predicate SendProposeAck(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
-    && recvMessage.Some?
-    && recvMessage.ProposeReqMsg?
+    && msgOps.recv.Some?
+    && var recvMsg := msgOps.recv.value;
+    && recvMsg.ProposeReqMsg?
     // Can we accept the proposal?
     && var accept :=
-      v.proposed.None? || v.proposed.value==recvMessage.value.leader;
+      v.proposed.None? || v.proposed.value==recvMsg.leader;
     // Send the reply
-    && sendMessages == { ProposeAckMsg(recvMessage.value.leader, c.id, accept) }
+    && msgOps.send == Some(ProposeAckMsg(recvMsg.leader, c.id, accept))
     // Record the acceptance or do nothing
-    && v' == if accept then v.(proposed := recvMessage.value.leader) else v
+    && v' == if accept then v.(proposed := Some(recvMsg.leader)) else v
   }
 
   // Leader collects an accept message
-  predicate LearnAccept(c: Constants, v: Variables, v': Variables)
+  predicate LearnAccept(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
-    && recvMessage.Some?
-    && recvMessage.value.ProposeAckMsg?
-    && recvMessage.value.leader == c.id // reply is to me
-    && recvMessage.value.accept == true  // and it's a positive ack
-    && v' == v.(locks := v.locks + {recvMessage.value.follower})
-    && sendMessages == {}
+    && msgOps.recv.Some?
+    && var recvMsg := msgOps.recv.value;
+    && recvMsg.ProposeAckMsg?
+    && recvMsg.leader == c.id // reply is to me
+    && recvMsg.accept == true  // and it's a positive ack
+    && v' == v.(locks := v.locks + {recvMsg.follower})
+    && msgOps.send.None?
   }
 
   // Phase 2
@@ -76,42 +91,44 @@ module Host {
   // This protocol isn't even a little live -- two hosts could propose,
   // accept their own proposal, reject the other's, mutually abort,
   // and have to both give up.
-  predicate SendAbort(c: Constants, v: Variables, v': Variables)
+  predicate LearnAndSendAbort(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
-    && recvMessage.Some?
-    && recvMessage.value.ProposeAck?
-    && recvMessage.value.leader == c.id // reply is to me
-    && recvMessage.value.accept == false  // and it's a nak
+    && msgOps.recv.Some?
+    && var recvMsg := msgOps.recv.value;
+    && recvMsg.ProposeAckMsg?
+    && recvMsg.leader == c.id // reply is to me
+    && recvMsg.accept == false  // and it's a nak
     && v.proposed == Some(c.id) // and I have actually proposed
-    && !recvMessage.value.accept  // and sender is aborting.
-    && sendMessages == { AbortMsg(c.id) }  // hasLead stays true, so I've lost
+    && !recvMsg.accept  // and sender is aborting.
+    && msgOps.send == Some(AbortMsg(c.id)) // hasLead stays true, so I'll never try again
   }
 
-  predicate RecvAbort(c: Constants, v: Variables, v': Variables)
+  predicate RecvAbort(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
-    && recvMessage.Some?
-    && recvMessage.value.AbortMsg?
-    && sendMessages == { }
-    // Can ignore messages that are aborting something other than I recorded.
-    && v.proposed == Some(recvMessage.value.leader)
+    && msgOps.recv.Some?
+    && var recvMsg := msgOps.recv.value;
+    && recvMsg.AbortMsg?
+    // Only act on messages that are aborting something other than I recorded.
+    && v.proposed == Some(recvMsg.leader)
     // Forget the proposal to be open to others.
     && v' == v.(proposed := None)
-    && sendMessages == { }
+    && msgOps.send.None?
   }
 
-  predicate SendCommit(c: Constants, v: Variables, v': Variables)
+  predicate SendCommit(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
-    && recvMessage.None?
+    && msgOps.recv.None?
     && |v.locks| == c.hostCount // Have heard N replies to a proposal I sent
-    && sendMessages == { CommitMsg(c.id) }
     && v' == v
+    && msgOps.send == Some(CommitMsg(c.id))
   }
 
-  predicate RecvCommit(c: Constants, v: Variables, v': Variables)
+  predicate RecvCommit(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
-    && recvMessage.Some?
-    && recvMessage.value.CommitMsg?
-    && sendMessages == { }
-    && v' == v.(leader := recvMessage.value.leader)
+    && msgOps.recv.Some?
+    && var recvMsg := msgOps.recv.value;
+    && recvMsg.CommitMsg?
+    && v' == v.(leader := Some(recvMsg.leader))
+    && msgOps.send.None?
   }
 }

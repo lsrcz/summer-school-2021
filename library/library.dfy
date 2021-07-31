@@ -44,4 +44,6 @@ module Library {
     var chosenIdx :| 0<=chosenIdx<|theSets| && member in theSets[chosenIdx];
     idx := chosenIdx;
   }
+
+  datatype Option<T> = Some(value:T) | None
 }
