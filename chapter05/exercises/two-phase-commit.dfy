@@ -131,4 +131,106 @@ module Host {
     && v' == v.(leader := Some(recvMsg.leader))
     && msgOps.send.None?
   }
+
+  // JayNF
+  datatype Step =
+    | SendProposeReqStep
+    | SendProposeAckStep
+    | LearnAcceptStep
+    | LearnAndSendAbortStep
+    | RecvAbortStep
+    | SendCommitStep
+    | RecvCommitStep
+
+  predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step, msgOps: MessageOps)
+  {
+    match step
+      case SendProposeReqStep => SendProposeReq(c, v, v', msgOps)
+      case SendProposeAckStep => SendProposeAck(c, v, v', msgOps)
+      case LearnAcceptStep => LearnAccept(c, v, v', msgOps)
+      case LearnAndSendAbortStep => LearnAndSendAbort(c, v, v', msgOps)
+      case RecvAbortStep => RecvAbort(c, v, v', msgOps)
+      case SendCommitStep => SendCommit(c, v, v', msgOps)
+      case RecvCommitStep => RecvCommit(c, v, v', msgOps)
+  }
+
+  // msgOps is a "binding variable" -- the host and the network have to agree on its assignment
+  // to make a valid transition. So the host explains what would happen if it could receive a
+  // particular message, and the network decides whether such a message is available for receipt.
+  predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
+  {
+    exists step :: NextStep(c, v, v', step, msgOps)
+  }
 }
+
+module Network {
+  import opened Types
+  import opened NetIfc
+
+  datatype Constants = Constants  // no constants for network
+
+  // Network state is the set of messages ever sent. Once sent, we'll
+  // allow it to be delivered over and over.
+  // (We don't have packet headers, so duplication, besides being realistic,
+  // also doubles as how multiple parties can hear the message.)
+  datatype Variables = Variables(sentMsgs:set<Message>)
+
+
+  predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
+  {
+    // Only allow receipt of a message if we've seen it has been sent.
+    && (msgOps.recv.Some? ==> msgOps.recv.value in v.sentMsgs)
+    // Record the sent message, if there was one.
+    && v'.sentMsgs ==
+      v.sentMsgs + if msgOps.send.None? then {} else { msgOps.send.value }
+  }
+}
+
+module DistributedSystem {
+  import opened Types
+  import opened NetIfc
+  import Host
+  import Network
+
+  datatype Constants = Constants(hosts: seq<Host.Constants>, network: Network.Constants) {
+    predicate WF() {
+      // Hosts' local idea of their own ids match their index in our global
+      // view.
+      && (forall idx | 0<=idx<|hosts| :: hosts[idx].id == idx)
+      // Hosts know the number of participants
+      && (forall idx | 0<=idx<|hosts| :: hosts[idx].hostCount == |hosts|)
+    }
+    predicate ValidHostId(id: HostId) {
+      id < |hosts|
+    }
+  }
+
+  datatype Variables = Variables(hosts: seq<Host.Variables>, network: Network.Variables) {
+    predicate WF(c: Constants) {
+      && |hosts| == |c.hosts|
+    }
+  }
+
+  datatype Step = Step(idx: HostId, msgOps: MessageOps)
+
+  predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
+  {
+    // only one disjunct, so we don't bother with the 'match' layer.
+    && c.WF()
+    && v.WF(c)
+    && v'.WF(c)
+    && var idx := step.idx;
+    && c.ValidHostId(idx)
+    && Host.Next(c.hosts[idx], v.hosts[idx], v'.hosts[idx], step.msgOps)
+    // all other hosts UNCHANGED
+    && (forall otherIdx | c.ValidHostId(otherIdx) && otherIdx != idx :: v'.hosts[idx] == v.hosts[idx])
+    // network agrees recv has been sent and records sent
+    && Network.Next(c.network, v.network, v'.network, step.msgOps)
+  }
+
+  predicate Next(c: Constants, v: Variables, v': Variables)
+  {
+    exists step :: NextStep(c, v, v', step)
+  }
+}
+
