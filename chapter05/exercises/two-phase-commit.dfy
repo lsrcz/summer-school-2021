@@ -273,6 +273,21 @@ module Proof {
       :: v.hosts[hosta].leader == v.hosts[hostb].leader)
   }
 
+  // Need this to keep an in-flight commit msg from breaking safety with an already-recorded leader.
+  predicate CommitMsgsDontConflictWithRecordedLeaders(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    && (forall msg, host:nat
+      |
+        && msg in v.network.sentMsgs
+        && msg.CommitMsg?
+        && c.ValidHostId(host)
+        && v.hosts[host].leader.Some?
+      :: msg.leader == v.hosts[host].leader.value
+      )
+  }
+
   predicate NoConflictingCommitMsgs(c: Constants, v: Variables)
     requires c.WF()
     requires v.WF(c)
@@ -292,6 +307,7 @@ module Proof {
     && c.WF()
     && v.WF(c)
     && NoConflictingCommitMsgs(c, v)
+    && CommitMsgsDontConflictWithRecordedLeaders(c, v)
     && Safety(c, v)
   }
 
@@ -306,7 +322,7 @@ module Proof {
     }
   }
 
-  lemma InvIndunctive(c: Constants, v: Variables, v': Variables)
+  lemma InvInductive(c: Constants, v: Variables, v': Variables)
     requires Inv(c, v)
     requires Next(c, v, v')
     ensures Inv(c, v')
@@ -315,28 +331,43 @@ module Proof {
       assume false;
     }
 
-    assert Safety(c, v') by {
-      forall hosta:nat, hostb:nat
+    assert CommitMsgsDontConflictWithRecordedLeaders(c, v') by {
+      forall msg, host:nat
         |
-          && c.ValidHostId(hosta)
-          && c.ValidHostId(hostb)
-          && v'.hosts[hosta].leader.Some?
-          && v'.hosts[hostb].leader.Some?
-        ensures v'.hosts[hosta].leader == v'.hosts[hostb].leader
+          && msg in v'.network.sentMsgs
+          && msg.CommitMsg?
+          && c.ValidHostId(host)
+          && v'.hosts[host].leader.Some?
+        ensures msg.leader == v'.hosts[host].leader.value
       {
         var step :| NextStep(c, v, v', step);
         var idx := step.idx;
         var hoststep :| Host.NextStep(c.hosts[idx], v.hosts[idx], v'.hosts[idx], hoststep, step.msgOps);
-
-        if hoststep.RecvCommitStep? {
-          // only interesting case.
-          assert v'.hosts[hosta].leader == v'.hosts[hostb].leader;
-        } else {
-          assert v'.hosts[hosta].leader == v.hosts[hosta].leader;
-          assert v'.hosts[hostb].leader == v.hosts[hostb].leader;
-          assert v'.hosts[hosta].leader == v'.hosts[hostb].leader;
-        }
+        
+        match hoststep
+          case SendProposeReqStep => { assert msg.leader == v'.hosts[host].leader.value; }
+          case SendProposeAckStep => { assert msg.leader == v'.hosts[host].leader.value; }
+          case LearnAcceptStep => { assert msg.leader == v'.hosts[host].leader.value; }
+          case LearnAndSendAbortStep => { assert msg.leader == v'.hosts[host].leader.value; }
+          case RecvAbortStep => { assert msg.leader == v'.hosts[host].leader.value; }
+          case SendCommitStep => { assert msg.leader == v'.hosts[host].leader.value; }
+          case RecvCommitStep => { assert msg.leader == v'.hosts[host].leader.value; }
       }
+    }
+
+    assert Safety(c, v') by {
+//      forall hosta:nat, hostb:nat
+//        |
+//          && c.ValidHostId(hosta)
+//          && c.ValidHostId(hostb)
+//          && v'.hosts[hosta].leader.Some?
+//          && v'.hosts[hostb].leader.Some?
+//        ensures v'.hosts[hosta].leader == v'.hosts[hostb].leader
+//      {
+//        var step :| NextStep(c, v, v', step);
+//        var idx := step.idx;
+//        var hoststep :| Host.NextStep(c.hosts[idx], v.hosts[idx], v'.hosts[idx], hoststep, step.msgOps);
+//      }
     }
   }
 
