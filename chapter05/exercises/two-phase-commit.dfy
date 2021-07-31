@@ -254,9 +254,11 @@ module Proof {
   import opened DistributedSystem
 
   predicate Safety(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
   {
     // If two hosts both conclude there's a leader, they think it's the same leader.
-    && (forall hosta, hostb
+    && (forall hosta:nat, hostb:nat
       |
         && c.ValidHostId(hosta)
         && c.ValidHostId(hostb)
@@ -267,6 +269,8 @@ module Proof {
   
   predicate Inv(c: Constants, v: Variables)
   {
+    && c.WF()
+    && v.WF(c)
     && Safety(c, v)
   }
 
