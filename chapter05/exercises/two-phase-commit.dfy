@@ -250,3 +250,42 @@ module DistributedSystem {
   }
 }
 
+module Proof {
+  import opened DistributedSystem
+
+  predicate Safety(c: Constants, v: Variables)
+  {
+    // If two hosts both conclude there's a leader, they think it's the same leader.
+    && (forall hosta, hostb
+      |
+        && c.ValidHostId(hosta)
+        && c.ValidHostId(hostb)
+        && v.hosts[hosta].leader.Some?
+        && v.hosts[hostb].leader.Some?
+      :: v.hosts[hosta].leader == v.hosts[hostb].leader)
+  }
+  
+  predicate Inv(c: Constants, v: Variables)
+  {
+    && Safety(c, v)
+  }
+
+  lemma InitImpliesInv(c: Constants, v: Variables)
+    requires Init(c, v)
+    ensures Inv(c, v)
+  {
+  }
+
+  lemma InvIndunctive(c: Constants, v: Variables, v': Variables)
+    requires Inv(c, v)
+    requires Next(c, v, v')
+    ensures Inv(c, v')
+  {
+  }
+
+  lemma InvImpliesSafety(c: Constants, v: Variables)
+    requires Inv(c, v)
+    ensures Safety(c, v)
+  { // Trivial, as usual, since safety is a conjunct in Inv.
+  }
+}
