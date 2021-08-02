@@ -27,3 +27,13 @@ method BinarySearch(haystack:array<int>, needle:int) returns (index:nat)
     return low; 
 }
 
+method Test()
+{
+    var a:array<int> := new int[5];
+    a[0],a[1],a[2],a[3],a[4] := 3,6,7,7,10;
+    var ret := BinarySearch(a,7);
+    assert(ret == 2);
+    var ret2 := BinarySearch(a,8);
+    assert(ret2 == 4);
+}
+

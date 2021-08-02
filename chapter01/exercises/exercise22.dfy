@@ -5,6 +5,12 @@
 
 datatype Tree = Tree // you should define your Tree datatype here 
 
+// You will find the following function method useful. It is meant to express  
+// the given tree as a sequence.
+//
+// New syntax:  a function method is just like any other function, except it 
+// can be used in an "imperative" context (i.e., inside a method)
+
 function method TreeAsSequence(t:Tree) : seq<int>
 {
     [] // Replace me    
@@ -14,15 +20,22 @@ predicate IsSortedTree(t:Tree) {
     true // Replace me
 }
 
+// You may find it useful to relate your recursive definition of IsSortedTree to
+// a sequential representation of the tree structure
+
+predicate SequenceIsSorted(s:seq<int>) {
+    forall i:nat,j:nat | i<j<|s| :: s[i] <= s[j]
+}
+
+lemma SortedTreeMeansSortedSequence(t:Tree)
+    requires IsSortedTree(t)
+    ensures SequenceIsSorted(TreeAsSequence(t))
+{
+}
+
 method CheckIfSortedTree(t:Tree) returns (sorted:bool)
     ensures sorted <==> IsSortedTree(t)
 {
-    return true;
-}
-
-lemma ISorted(t:Tree)
-    requires IsSortedTree(t) 
-    ensures forall j,k | 0 <= j <= k < |TreeAsSequence(t)| :: TreeAsSequence(t)[j] <= TreeAsSequence(t)[k]
-{
+    return false;
 }
 

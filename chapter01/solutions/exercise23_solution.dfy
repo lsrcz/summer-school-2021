@@ -1,8 +1,8 @@
-include "binary-tree.dfy"
+include "exercise22_solution.dfy"
 
 method FindInBinaryTree(t:Tree, needle:int) returns (b:bool)
     requires IsSortedTree(t)
-    ensures b <==> needle in I(t)
+    ensures b <==> needle in TreeAsSequence(t)
 {
     if (t.Nil?) {
         return false;
