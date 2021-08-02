@@ -6,15 +6,13 @@ method FindMax(a:array<int>) returns (maxIndex:nat)
     var j:nat := 0;
     maxIndex := 0;
     while(j < a.Length) 
-        invariant j <= a.Length
-        invariant maxIndex < a.Length
-        invariant forall k:nat | k<j :: a[maxIndex] >= a[k]
+        invariant true
+        invariant true
+        invariant true
     {
-        if(a[j] > a[maxIndex]) {
+        if(a[maxIndex] < a[j]) {
             maxIndex := j;
         }
         j := j+1;
     }
-    assert j >= a.Length;   
-    assert forall j:nat | j<a.Length :: a[j] <= a[maxIndex];
 }

@@ -18,11 +18,13 @@ datatype CokeMachine = CokeMachine(numCokes:int)
 predicate Init(c:Constants, v:CokeMachine) {
 //#elide    && c.capacity == 7
 //#elide    && v.numCokes == 0
+    true // replace me
 }
 
 predicate Purchase(c:Constants, v:CokeMachine, v':CokeMachine) {
 //#elide    && v.numCokes > 0
 //#elide    && v'.numCokes == v.numCokes - 1
+    true // replace me
 }
 
 predicate Restock(c:Constants, v:CokeMachine, v':CokeMachine, numRestock:int) 
@@ -30,6 +32,7 @@ predicate Restock(c:Constants, v:CokeMachine, v':CokeMachine, numRestock:int)
 //#elide    && numRestock >= 0
 //#elide    && v.numCokes + numRestock <= maxCokes()
 //#elide    && v'.numCokes == v.numCokes + numRestock
+    true // replace me
 }
 
 predicate Next(c:Constants, v:CokeMachine, v':CokeMachine) {
@@ -50,7 +53,7 @@ lemma SafetyProof()
     ensures forall c, v | Init(c, v) :: Inv(c, v)
     ensures forall c, v, v' | Inv(c, v) && Next(c, v, v') :: Inv(c, v')
 {
-    forall v, v' | Inv(c, v) && Next(c, v, v') 
+    forall c, v, v' | Inv(c, v) && Next(c, v, v') 
         ensures Inv(c, v')
     {
         if(Purchase(c, v, v')) {
