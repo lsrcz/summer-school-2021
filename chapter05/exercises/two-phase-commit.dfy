@@ -257,6 +257,7 @@ module DistributedSystem {
 }
 
 module Proof {
+  import opened Types
   import opened DistributedSystem
 
   predicate Safety(c: Constants, v: Variables)
@@ -271,6 +272,54 @@ module Proof {
         && v.hosts[hosta].leader.Some?
         && v.hosts[hostb].leader.Some?
       :: v.hosts[hosta].leader == v.hosts[hostb].leader)
+  }
+
+  predicate ReadyLeader(c: Constants, v: Variables, idx: HostId)
+    requires c.WF()
+    requires v.WF(c)
+    requires c.ValidHostId(idx)
+  {
+    && |v.hosts[idx].locks| == |c.hosts|
+  }
+
+  predicate NoConflictingReadyLeaders(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    && (forall hosta:nat, hostb:nat
+      |
+        && c.ValidHostId(hosta)
+        && c.ValidHostId(hostb)
+        && ReadyLeader(c, v, hosta)
+        && ReadyLeader(c, v, hostb)
+      :: hosta == hostb)
+  }
+
+  predicate CommitMsgsDontConflictWithReadyLeaders(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    && (forall msg, host:nat
+      |
+        && msg in v.network.sentMsgs
+        && msg.CommitMsg?
+        && c.ValidHostId(host)
+        && ReadyLeader(c, v, host)
+      :: msg.leader == host
+      )
+  }
+
+  predicate ReadyLeadersDontConflictWithRecordedLeaders(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    && (forall hosta:nat, hostb:nat
+      |
+        && c.ValidHostId(hosta)
+        && c.ValidHostId(hostb)
+        && ReadyLeader(c, v, hosta)
+        && v.hosts[hostb].leader.Some?
+      :: hosta == v.hosts[hostb].leader.value)
   }
 
   // Need this to keep an in-flight commit msg from breaking safety with an already-recorded leader.
@@ -307,6 +356,7 @@ module Proof {
     && c.WF()
     && v.WF(c)
     && NoConflictingCommitMsgs(c, v)
+    && ReadyLeadersDontConflictWithRecordedLeaders(c, v)
     && CommitMsgsDontConflictWithRecordedLeaders(c, v)
     && Safety(c, v)
   }
@@ -331,6 +381,10 @@ module Proof {
       assume false;
     }
 
+    assert ReadyLeadersDontConflictWithRecordedLeaders(c, v') by {
+      assume false;
+    }
+
     assert CommitMsgsDontConflictWithRecordedLeaders(c, v') by {
       forall msg, host:nat
         |
@@ -350,7 +404,10 @@ module Proof {
           case LearnAcceptStep => { assert msg.leader == v'.hosts[host].leader.value; }
           case LearnAndSendAbortStep => { assert msg.leader == v'.hosts[host].leader.value; }
           case RecvAbortStep => { assert msg.leader == v'.hosts[host].leader.value; }
-          case SendCommitStep => { assert msg.leader == v'.hosts[host].leader.value; }
+          case SendCommitStep => {
+            assert ReadyLeader(c, v, idx);
+            assert msg.leader == v'.hosts[host].leader.value;
+          }
           case RecvCommitStep => { assert msg.leader == v'.hosts[host].leader.value; }
       }
     }
