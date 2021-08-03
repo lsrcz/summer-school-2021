@@ -1,21 +1,41 @@
 /*
- * Single-instance 2PC.
+ * Two-phase commit protocol -- no failures, safety only
+ *
+ * (TODO Manos provide slide link. Slides are on the web, but only behind a sleazy scraper site.)
+ *
+ * Coordinator sends VOTE-REQ to all participants.
+ * Each participant i sends back vote_i to coordinator.
+ *   If vote_i=No then i sets decision_i := Abort.
+ * Coordinator collects votes.
+ *   If all votes are yes then coordinator sets decision_c := Commit and sends Commit to all participants.
+ *   Else coordinator sets decision_c := Abort and sends Abort to all participants who voted yes.
+ * Participants receiving Commit set decision_i := Commit
+ *   (The slide is delightfully poorly specified. "else decision_i := Abort"!? When else? As soon as
+ *   it doesn't hear Commit!?)
+ *
+ * Model the Coordinator and Participants as separate host types, since they have unrelated state & behavior.
+ * Model the Participants as each having a constant preferred value that they'll vote for; 2PC learns
+ * whether the Participants all prefer a Yes vote.
+ * Because we're assuming no host failure, the coordinator can simply wait until every vote has been
+ * cast to compute its decision.
  */
 
 include "../../library/library.dfy"
 
 // Player 2
 module Types {
-  type HostId = nat
+  type ParticipantId = nat
+
+  datatype Vote = Yes | No
+  datatype Decision = Commit | Abort
 
   // Have to define our message datatype so network can refer to it.
   // (There are cleverer ways to parameterize the network module, but
   // we're trying to avoid getting fancy with the Dafny module system.)
   datatype Message =
-    | ProposeReqMsg(leader: nat)   // from leader
-    | ProposeAckMsg(leader:nat, follower: nat, accept: bool) // from follower
-    | AbortMsg(leader: nat)        // from leader
-    | CommitMsg(leader: nat)       // from leader
+    | VoteReqMsg                           // from leader
+    | VoteMsg(sender: ParticipantId, vote: Vote)  // from participant
+    | DecisionMsg(decision: Decision)
 }
 
 // Player 1
@@ -26,141 +46,138 @@ module NetIfc {
 }
 
 // Player 2
-module Host {
+module CoordinatorHost {
   import opened Types
   import opened Library
   import opened NetIfc
 
-  datatype Constants = Constants(id: HostId, hostCount: nat)
-  datatype Variables = Variables(
-    // Follower state
-    proposed: Option<HostId>, // a proposed value locked at this host
-    leader: Option<HostId>,   // a committed result
-
-    // Leader state
-    hasLead: bool,           // I only ever get to propose once
-    locks: set<HostId>        // who has acked my proposal
-    )
-
-  predicate SendProposeReq(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
+  datatype Constants = Constants(hostCount: nat)
+  datatype Variables = Variables(votes: seq<Option<Vote>>, decision: Option<Decision>)
   {
-    // Can't start the protocol if
-    // * we already started a protocol (and may even have aborted, so
-    //    need the hasLead field to know if such a message is outstanding)
-    // * have accepted some other proposal or
-    // * have actually learned a committed result.
-    && !v.hasLead
-    && v.proposed.None?
-    && v.leader.None?
-    // Propose that I should lead.
-    && msgOps == MessageOps(None, Some(ProposeReqMsg(c.id)))
-    // I could record my proposal right now, but I'll just observe
-    // my own message.
-    && v' == v.(hasLead := true)
-  }
-
-  // acceptor decides what to do with the proposal.
-  predicate SendProposeAck(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
-  {
-    && msgOps.recv.Some?
-    && var recvMsg := msgOps.recv.value;
-    && recvMsg.ProposeReqMsg?
-    // Can we accept the proposal?
-    && var accept :=
-      v.proposed.None? || v.proposed.value==recvMsg.leader;
-    // Send the reply
-    && msgOps.send == Some(ProposeAckMsg(recvMsg.leader, c.id, accept))
-    // Record the acceptance or do nothing
-    && v' == if accept then v.(proposed := Some(recvMsg.leader)) else v
-  }
-
-  // Leader collects an accept message
-  predicate LearnAccept(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
-  {
-    && msgOps.recv.Some?
-    && var recvMsg := msgOps.recv.value;
-    && recvMsg.ProposeAckMsg?
-    && recvMsg.leader == c.id // reply is to me
-    && recvMsg.accept == true  // and it's a positive ack
-    && v' == v.(locks := v.locks + {recvMsg.follower})
-    && msgOps.send.None?
-  }
-
-  // Phase 2
-
-  // This protocol isn't even a little live -- two hosts could propose,
-  // accept their own proposal, reject the other's, mutually abort,
-  // and have to both give up.
-  predicate LearnAndSendAbort(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
-  {
-    && msgOps.recv.Some?
-    && var recvMsg := msgOps.recv.value;
-    && recvMsg.ProposeAckMsg?
-    && recvMsg.leader == c.id // reply is to me
-    && recvMsg.accept == false  // and it's a nak
-    && v.proposed == Some(c.id) // and I have actually proposed
-    && !recvMsg.accept  // and sender is aborting.
-    && v' == v
-    && msgOps.send == Some(AbortMsg(c.id)) // hasLead stays true, so I'll never try again
-  }
-
-  predicate RecvAbort(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
-  {
-    && msgOps.recv.Some?
-    && var recvMsg := msgOps.recv.value;
-    && recvMsg.AbortMsg?
-    // Only act on messages that are aborting something other than I recorded.
-    && v.proposed == Some(recvMsg.leader)
-    // Forget the proposal to be open to others.
-    && v' == v.(proposed := None)
-    && msgOps.send.None?
-  }
-
-  predicate SendCommit(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
-  {
-    && msgOps.recv.None?
-    && |v.locks| == c.hostCount // Have heard N replies to a proposal I sent
-    && v' == v
-    && msgOps.send == Some(CommitMsg(c.id))
-  }
-
-  predicate RecvCommit(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
-  {
-    && msgOps.recv.Some?
-    && var recvMsg := msgOps.recv.value;
-    && recvMsg.CommitMsg?
-    && v' == v.(leader := Some(recvMsg.leader))
-    && msgOps.send.None?
+    predicate WF(c: Constants) {
+      && |votes| == c.hostCount
+    }
   }
 
   predicate Init(c: Constants, v: Variables)
   {
-    && v.proposed.None?
-    && v.leader.None?
-    && !v.hasLead
-    && v.locks == {}
+    && v.WF(c)
+    // No votes recorded yet
+    && (forall hostIdx:ParticipantId | hostIdx < |v.votes| :: v.votes[hostIdx].None?)
+    // No decision recorded yet
+    && v.decision.None?
+  }
+
+  // Protocol steps
+
+  predicate SendReq(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
+  {
+    && v.WF(c)
+    && v'.WF(c)
+    && msgOps == MessageOps(None, Some(VoteReqMsg))
+    && v' == v  // UNCHANGED everything.
+  }
+
+  predicate LearnVote(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
+  {
+    && v.WF(c)
+    && v'.WF(c)
+    && msgOps.recv.Some?
+    && var recvMsg := msgOps.recv.value;
+    && recvMsg.VoteMsg?
+    && recvMsg.sender < c.hostCount
+    // Record sender's vote.
+    && v' == v.(votes := v.votes[recvMsg.sender := Some(recvMsg.vote)])
+  }
+
+  // Pulled into predicate to mention from proof
+  predicate ObservesResult(c: Constants, v: Variables, decision: Decision)
+  {
+    // We have heard from all participants.
+    && (forall hostIdx:ParticipantId | hostIdx < |v.votes| :: v.votes[hostIdx].Some?)
+    // Compute the decision (all Yes -> Commit)
+    && decision ==
+      if (forall hostIdx:ParticipantId | hostIdx < |v.votes| :: v.votes[hostIdx].value.Yes?)
+      then Commit
+      else Abort
+  }
+
+  predicate Decide(c: Constants, v: Variables, v': Variables, decision: Decision, msgOps: MessageOps)
+  {
+    && v.WF(c)
+    && v'.WF(c)
+    && msgOps.recv.None?
+    && ObservesResult(c, v, decision)
+    // Record the decision
+    && v' == v.(decision := Some(decision))
+    // Transmit the decision
+    && msgOps.send == Some(DecisionMsg(decision))
   }
 
   // JayNF
   datatype Step =
-    | SendProposeReqStep
-    | SendProposeAckStep
-    | LearnAcceptStep
-    | LearnAndSendAbortStep
-    | RecvAbortStep
-    | SendCommitStep
-    | RecvCommitStep
+    | SendReqStep
+    | LearnVoteStep
+    | DecideStep(decision: Decision)
 
   predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step, msgOps: MessageOps)
   {
     match step
-      case SendProposeReqStep => SendProposeReq(c, v, v', msgOps)
-      case SendProposeAckStep => SendProposeAck(c, v, v', msgOps)
-      case LearnAcceptStep => LearnAccept(c, v, v', msgOps)
-      case LearnAndSendAbortStep => LearnAndSendAbort(c, v, v', msgOps)
-      case RecvAbortStep => RecvAbort(c, v, v', msgOps)
-      case SendCommitStep => SendCommit(c, v, v', msgOps)
-      case RecvCommitStep => RecvCommit(c, v, v', msgOps)
+      case SendReqStep => SendReq(c, v, v', msgOps)
+      case LearnVoteStep => LearnVote(c, v, v', msgOps)
+      case DecideStep(decision) => Decide(c, v, v', decision, msgOps)
+  }
+
+  // msgOps is a "binding variable" -- the host and the network have to agree on its assignment
+  // to make a valid transition. So the host explains what would happen if it could receive a
+  // particular message, and the network decides whether such a message is available for receipt.
+  predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
+  {
+    exists step :: NextStep(c, v, v', step, msgOps)
+  }
+}
+
+module ParticipantHost {
+  import opened Types
+  import opened Library
+  import opened NetIfc
+
+  datatype Constants = Constants(hostId: ParticipantId, preference: Vote)
+  datatype Variables = Variables(decision: Option<Decision>)
+
+  predicate Vote(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
+  {
+    && msgOps.recv.Some?
+    && var recvMsg := msgOps.recv.value;
+    && recvMsg.VoteReqMsg?
+    && msgOps.send == Some(VoteMsg(c.hostId, c.preference))
+    // Infer Abort decision if we're voting No
+    && v'.decision == if c.preference.No? then Some(Abort) else v.decision
+  }
+
+  predicate LearnDecision(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
+  {
+    && msgOps.recv.Some?
+    && var recvMsg := msgOps.recv.value;
+    && recvMsg.DecisionMsg?
+    && v'.decision == Some(recvMsg.decision)
+  }
+
+  predicate Init(c: Constants, v: Variables)
+  {
+    && v.decision.None?
+  }
+
+  // JayNF
+  datatype Step =
+    | VoteStep
+    | LearnDecisionStep
+
+  predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step, msgOps: MessageOps)
+  {
+    match step
+      case VoteStep => Vote(c, v, v', msgOps)
+      case LearnDecisionStep => LearnDecision(c, v, v', msgOps)
   }
 
   // msgOps is a "binding variable" -- the host and the network have to agree on its assignment
@@ -202,25 +219,36 @@ module Network {
 module DistributedSystem {
   import opened Types
   import opened NetIfc
-  import Host
+  import CoordinatorHost
+  import ParticipantHost
   import Network
 
-  datatype Constants = Constants(hosts: seq<Host.Constants>, network: Network.Constants) {
+  datatype Constants = Constants(
+    coordinator: CoordinatorHost.Constants,
+    participants: seq<ParticipantHost.Constants>,
+    network: Network.Constants)
+  {
     predicate WF() {
-      // Hosts' local idea of their own ids match their index in our global
-      // view.
-      && (forall idx | 0<=idx<|hosts| :: hosts[idx].id == idx)
-      // Hosts know the number of participants
-      && (forall idx | 0<=idx<|hosts| :: hosts[idx].hostCount == |hosts|)
+      // Coordinator knows how many participants to expect votes from
+      && coordinator.hostCount == |participants|
+      // Participants know their own ids
+      && (forall idx | 0<=idx<|participants| :: participants[idx].hostId == idx)
+      // Note we *DON'T* specify partipants' preference fields; that's the
+      // degree of freedom that gives the protocol something to do.
     }
-    predicate ValidHostId(id: HostId) {
-      id < |hosts|
+    predicate ValidParticipantId(id: ParticipantId) {
+      id < |participants|
     }
   }
 
-  datatype Variables = Variables(hosts: seq<Host.Variables>, network: Network.Variables) {
+  datatype Variables = Variables(
+    coordinator: CoordinatorHost.Variables,
+    participants: seq<ParticipantHost.Variables>,
+    network: Network.Variables)
+  {
     predicate WF(c: Constants) {
-      && |hosts| == |c.hosts|
+      && |participants| == |c.participants|
+      && coordinator.WF(c.coordinator)
     }
   }
 
@@ -228,24 +256,48 @@ module DistributedSystem {
   {
     && c.WF()
     && v.WF(c)
-    && (forall idx:nat | c.ValidHostId(idx) :: Host.Init(c.hosts[idx], v.hosts[idx]))
+    && CoordinatorHost.Init(c.coordinator, v.coordinator)
+    && (forall idx:nat | c.ValidParticipantId(idx) :: ParticipantHost.Init(c.participants[idx], v.participants[idx]))
     && Network.Init(c.network, v.network)
   }
 
-  // JayNF is pretty simple here since only one transition disjunct at this level.
-  datatype Step = Step(idx: HostId, msgOps: MessageOps)
-
-  predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
+  predicate Coordinator(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
-    // only one disjunct, so we don't bother with the 'match' layer.
     && c.WF()
     && v.WF(c)
     && v'.WF(c)
-    && var idx := step.idx;
-    && c.ValidHostId(idx)
-    && Host.Next(c.hosts[idx], v.hosts[idx], v'.hosts[idx], step.msgOps)
-    // all other hosts UNCHANGED
-    && (forall otherIdx:nat | c.ValidHostId(otherIdx) && otherIdx != idx :: v'.hosts[otherIdx] == v.hosts[otherIdx])
+    && CoordinatorHost.Next(c.coordinator, v.coordinator, v'.coordinator, msgOps)
+    // all participants UNCHANGED
+    && (forall idx:nat | c.ValidParticipantId(idx) :: v'.participants[idx] == v.participants[idx])
+  }
+
+  predicate Participant(c: Constants, v: Variables, v': Variables, idx: ParticipantId, msgOps: MessageOps)
+  {
+    && c.WF()
+    && v.WF(c)
+    && v'.WF(c)
+    && c.ValidParticipantId(idx)
+    && ParticipantHost.Next(c.participants[idx], v.participants[idx], v'.participants[idx], msgOps)
+    // all other participants UNCHANGED
+    && (forall otherIdx:nat | c.ValidParticipantId(otherIdx) && otherIdx != idx :: v'.participants[otherIdx] == v.participants[otherIdx])
+    // coordinator UNCHANGED
+    && v'.coordinator == v.coordinator
+  }
+
+  datatype Step =
+    | CoordinatorStep(msgOps: MessageOps)
+    | ParticipantStep(idx: ParticipantId, msgOps: MessageOps)
+
+  predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
+  {
+    && c.WF()
+    && v.WF(c)
+    && v'.WF(c)
+    && (
+      match step
+        case CoordinatorStep(msgOps) => Coordinator(c, v, v', msgOps)
+        case ParticipantStep(idx, msgOps) => Participant(c, v, v', idx, msgOps)
+      )
     // network agrees recv has been sent and records sent
     && Network.Next(c.network, v.network, v'.network, step.msgOps)
   }
@@ -260,104 +312,66 @@ module Proof {
   import opened Types
   import opened DistributedSystem
 
+  predicate AllAgreeWithDecision(c: Constants, v: Variables, decision: Decision)
+    requires c.WF()
+    requires v.WF(c)
+    // I pulled this conjunction into a named predicate because Dafny warned of
+    // no trigger for the exists.
+  {
+    && (v.coordinator.decision.Some? ==> v.coordinator.decision.value == decision)
+    && (forall idx:ParticipantId | c.ValidParticipantId(idx) && v.participants[idx].decision.Some?
+      :: v.participants[idx].decision.value == decision)
+  }
+
   predicate Safety(c: Constants, v: Variables)
     requires c.WF()
     requires v.WF(c)
   {
-    // If two hosts both conclude there's a leader, they think it's the same leader.
-    && (forall hosta:nat, hostb:nat
-      |
-        && c.ValidHostId(hosta)
-        && c.ValidHostId(hostb)
-        && v.hosts[hosta].leader.Some?
-        && v.hosts[hostb].leader.Some?
-      :: v.hosts[hosta].leader == v.hosts[hostb].leader)
+    // There's some decision everybody can agree on.
+    exists decision :: AllAgreeWithDecision(c, v, decision)
   }
 
-  predicate ReadyLeader(c: Constants, v: Variables, idx: HostId)
-    requires c.WF()
-    requires v.WF(c)
-    requires c.ValidHostId(idx)
-  {
-    && |v.hosts[idx].locks| == |c.hosts|
-  }
-
-  predicate NoConflictingReadyLeaders(c: Constants, v: Variables)
+  predicate VoteMessagesAgreeWithParticipantPreferences(c: Constants, v: Variables)
     requires c.WF()
     requires v.WF(c)
   {
-    && (forall hosta:nat, hostb:nat
-      |
-        && c.ValidHostId(hosta)
-        && c.ValidHostId(hostb)
-        && ReadyLeader(c, v, hosta)
-        && ReadyLeader(c, v, hostb)
-      :: hosta == hostb)
+    (forall msg |
+      && msg in v.network.sentMsgs
+      && msg.VoteMsg?
+      && c.ValidParticipantId(msg.sender)
+      :: msg.vote == c.participants[msg.sender].preference
+    )
   }
 
-  predicate CommitMsgsDontConflictWithReadyLeaders(c: Constants, v: Variables)
+  predicate CoordinatorStateAgreesWithParticipantPreferences(c: Constants, v: Variables)
     requires c.WF()
     requires v.WF(c)
   {
-    && (forall msg, host:nat
-      |
-        && msg in v.network.sentMsgs
-        && msg.CommitMsg?
-        && c.ValidHostId(host)
-        && ReadyLeader(c, v, host)
-      :: msg.leader == host
-      )
+    (forall idx:ParticipantId |
+      && c.ValidParticipantId(idx)
+      && v.coordinator.votes[idx].Some?
+      :: v.coordinator.votes[idx].value == c.participants[idx].preference
+    )
   }
 
-  predicate ReadyLeadersDontConflictWithRecordedLeaders(c: Constants, v: Variables)
+  predicate DecisionMsgsAgreeWithDecision(c: Constants, v: Variables)
     requires c.WF()
     requires v.WF(c)
   {
-    && (forall hosta:nat, hostb:nat
-      |
-        && c.ValidHostId(hosta)
-        && c.ValidHostId(hostb)
-        && ReadyLeader(c, v, hosta)
-        && v.hosts[hostb].leader.Some?
-      :: hosta == v.hosts[hostb].leader.value)
+    (forall msg |
+      && msg in v.network.sentMsgs
+      && msg.DecisionMsg?
+      :: CoordinatorHost.ObservesResult(c.coordinator, v.coordinator, msg.decision)
+    )
   }
 
-  // Need this to keep an in-flight commit msg from breaking safety with an already-recorded leader.
-  predicate CommitMsgsDontConflictWithRecordedLeaders(c: Constants, v: Variables)
-    requires c.WF()
-    requires v.WF(c)
-  {
-    && (forall msg, host:nat
-      |
-        && msg in v.network.sentMsgs
-        && msg.CommitMsg?
-        && c.ValidHostId(host)
-        && v.hosts[host].leader.Some?
-      :: msg.leader == v.hosts[host].leader.value
-      )
-  }
-
-  predicate NoConflictingCommitMsgs(c: Constants, v: Variables)
-    requires c.WF()
-    requires v.WF(c)
-  {
-    && (forall msga, msgb
-      |
-        && msga in v.network.sentMsgs
-        && msgb in v.network.sentMsgs
-        && msga.CommitMsg?
-        && msgb.CommitMsg?
-      :: msga.leader == msgb.leader
-      )
-  }
-  
   predicate Inv(c: Constants, v: Variables)
   {
     && c.WF()
     && v.WF(c)
-    && NoConflictingCommitMsgs(c, v)
-    && ReadyLeadersDontConflictWithRecordedLeaders(c, v)
-    && CommitMsgsDontConflictWithRecordedLeaders(c, v)
+    && VoteMessagesAgreeWithParticipantPreferences(c, v)
+    && CoordinatorStateAgreesWithParticipantPreferences(c, v)
+    && DecisionMsgsAgreeWithDecision(c, v)
     && Safety(c, v)
   }
 
@@ -365,11 +379,9 @@ module Proof {
     requires Init(c, v)
     ensures Inv(c, v)
   {
-    assert NoConflictingCommitMsgs(c, v) by {
-    }
-
-    assert Safety(c, v) by {
-    }
+    // Nobody has agreed with anything yet, so they agree with both.
+    assert AllAgreeWithDecision(c, v, Commit); // witness.
+    assert AllAgreeWithDecision(c, v, Abort); // witness.
   }
 
   lemma InvInductive(c: Constants, v: Variables, v': Variables)
@@ -377,55 +389,55 @@ module Proof {
     requires Next(c, v, v')
     ensures Inv(c, v')
   {
-    assert NoConflictingCommitMsgs(c, v') by {
-      assume false;
-    }
-
-    assert ReadyLeadersDontConflictWithRecordedLeaders(c, v') by {
-      assume false;
-    }
-
-    assert CommitMsgsDontConflictWithRecordedLeaders(c, v') by {
-      forall msg, host:nat
-        |
-          && msg in v'.network.sentMsgs
-          && msg.CommitMsg?
-          && c.ValidHostId(host)
-          && v'.hosts[host].leader.Some?
-        ensures msg.leader == v'.hosts[host].leader.value
-      {
-        var step :| NextStep(c, v, v', step);
-        var idx := step.idx;
-        var hoststep :| Host.NextStep(c.hosts[idx], v.hosts[idx], v'.hosts[idx], hoststep, step.msgOps);
-        
-        match hoststep
-          case SendProposeReqStep => { assert msg.leader == v'.hosts[host].leader.value; }
-          case SendProposeAckStep => { assert msg.leader == v'.hosts[host].leader.value; }
-          case LearnAcceptStep => { assert msg.leader == v'.hosts[host].leader.value; }
-          case LearnAndSendAbortStep => { assert msg.leader == v'.hosts[host].leader.value; }
-          case RecvAbortStep => { assert msg.leader == v'.hosts[host].leader.value; }
-          case SendCommitStep => {
-            assert ReadyLeader(c, v, idx);
-            assert msg.leader == v'.hosts[host].leader.value;
-          }
-          case RecvCommitStep => { assert msg.leader == v'.hosts[host].leader.value; }
-      }
-    }
-
-    assert Safety(c, v') by {
-//      forall hosta:nat, hostb:nat
+//    assert NoConflictingCommitMsgs(c, v') by {
+//      assume false;
+//    }
+//
+//    assert ReadyLeadersDontConflictWithRecordedLeaders(c, v') by {
+//      assume false;
+//    }
+//
+//    assert CommitMsgsDontConflictWithRecordedLeaders(c, v') by {
+//      forall msg, host:nat
 //        |
-//          && c.ValidHostId(hosta)
-//          && c.ValidHostId(hostb)
-//          && v'.hosts[hosta].leader.Some?
-//          && v'.hosts[hostb].leader.Some?
-//        ensures v'.hosts[hosta].leader == v'.hosts[hostb].leader
+//          && msg in v'.network.sentMsgs
+//          && msg.CommitMsg?
+//          && c.ValidParticipantId(host)
+//          && v'.hosts[host].leader.Some?
+//        ensures msg.leader == v'.hosts[host].leader.value
 //      {
 //        var step :| NextStep(c, v, v', step);
 //        var idx := step.idx;
 //        var hoststep :| Host.NextStep(c.hosts[idx], v.hosts[idx], v'.hosts[idx], hoststep, step.msgOps);
+//        
+//        match hoststep
+//          case SendProposeReqStep => { assert msg.leader == v'.hosts[host].leader.value; }
+//          case SendProposeAckStep => { assert msg.leader == v'.hosts[host].leader.value; }
+//          case LearnAcceptStep => { assert msg.leader == v'.hosts[host].leader.value; }
+//          case LearnAndSendAbortStep => { assert msg.leader == v'.hosts[host].leader.value; }
+//          case RecvAbortStep => { assert msg.leader == v'.hosts[host].leader.value; }
+//          case SendCommitStep => {
+//            assert ReadyLeader(c, v, idx);
+//            assert msg.leader == v'.hosts[host].leader.value;
+//          }
+//          case RecvCommitStep => { assert msg.leader == v'.hosts[host].leader.value; }
 //      }
-    }
+//    }
+//
+//    assert Safety(c, v') by {
+////      forall hosta:nat, hostb:nat
+////        |
+////          && c.ValidParticipantId(hosta)
+////          && c.ValidParticipantId(hostb)
+////          && v'.hosts[hosta].leader.Some?
+////          && v'.hosts[hostb].leader.Some?
+////        ensures v'.hosts[hosta].leader == v'.hosts[hostb].leader
+////      {
+////        var step :| NextStep(c, v, v', step);
+////        var idx := step.idx;
+////        var hoststep :| Host.NextStep(c.hosts[idx], v.hosts[idx], v'.hosts[idx], hoststep, step.msgOps);
+////      }
+//    }
   }
 
   lemma InvImpliesSafety(c: Constants, v: Variables)
