@@ -162,6 +162,7 @@ module ParticipantHost {
     && var recvMsg := msgOps.recv.value;
     && recvMsg.DecisionMsg?
     && v'.decision == Some(recvMsg.decision)
+    && msgOps.send.None?
   }
 
   predicate Init(c: Constants, v: Variables)
@@ -405,10 +406,15 @@ module Proof {
         assert msg in v.network.sentMsgs;
         assert msg.vote == c.participants[msg.sender].preference;
       } else {
-        assume false;
         var participantStep :| ParticipantHost.NextStep(c.participants[step.idx], v.participants[step.idx], v'.participants[step.idx], participantStep, step.msgOps);
-        assert msg in v.network.sentMsgs;
-        assert msg.vote == c.participants[msg.sender].preference;
+        if participantStep.VoteStep? {
+        //&& msg == VoteMsg(c.participants[step.idx].hostId, c.participants[step.idx].preference) {
+          assert msg in v.network.sentMsgs;
+          assert msg.vote == c.participants[msg.sender].preference;
+        } else {
+          assert msg in v.network.sentMsgs;
+          assert msg.vote == c.participants[msg.sender].preference;
+        }
       }
     }
 
