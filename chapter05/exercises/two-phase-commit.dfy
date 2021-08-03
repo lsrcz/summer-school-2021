@@ -350,6 +350,17 @@ module Proof {
     )
   }
 
+  predicate CoordinatorStateSupportedByVote(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    (forall idx:ParticipantId |
+      && c.ValidParticipantId(idx)
+      && v.coordinator.votes[idx].Some?
+      :: VoteMsg(idx, v.coordinator.votes[idx].value) in v.network.sentMsgs
+    )
+  }
+
   predicate CoordinatorStateAgreesWithParticipantPreferences(c: Constants, v: Variables)
     requires c.WF()
     requires v.WF(c)
@@ -372,13 +383,43 @@ module Proof {
     )
   }
 
+  predicate ParticipantsRecordingDecisionEitherPreferAbortOrSentVote(c: Constants, v: Variables)
+  {
+    (forall idx:ParticipantId | 
+      && c.ValidParticipantId(idx)
+      && v.participants[idx].decision.Some?
+      :: (
+        || c.participants[idx].preference.No?  // one way to already know your decision
+        || VoteMsg(idx, Yes) in v.network.sentMsgs // the other way
+      )
+    )
+  }
+
+  predicate ParticipantsRecordDecisionMsgs(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
+    // I pulled this conjunction into a named predicate because Dafny warned of
+    // no trigger for the exists.
+  {
+    (forall idx:ParticipantId, msg | 
+      && c.ValidParticipantId(idx)
+      && msg in v.network.sentMsgs
+      && msg.DecisionMsg?
+      && v.participants[idx].decision.Some?
+      :: v.participants[idx].decision.value == msg.decision
+    )
+  }
+
   predicate Inv(c: Constants, v: Variables)
   {
     && c.WF()
     && v.WF(c)
     && VoteMessagesAgreeWithParticipantPreferences(c, v)
+    && CoordinatorStateSupportedByVote(c, v)
     && CoordinatorStateAgreesWithParticipantPreferences(c, v)
     && DecisionMsgsAgreeWithDecision(c, v)
+    && ParticipantsRecordingDecisionEitherPreferAbortOrSentVote(c, v)
+    && ParticipantsRecordDecisionMsgs(c, v)
     && Safety(c, v)
   }
 
@@ -462,13 +503,110 @@ module Proof {
     }
     assert DecisionMsgsAgreeWithDecision(c, v');
 
-    if step.CoordinatorStep? {
-      var coordinatorStep :| CoordinatorHost.NextStep(c.coordinator, v.coordinator, v'.coordinator, coordinatorStep, step.msgOps);
-      assert Safety(c, v');
-    } else {
-      var participantStep :| ParticipantHost.NextStep(c.participants[step.idx], v.participants[step.idx], v'.participants[step.idx], participantStep, step.msgOps);
-      assert Safety(c, v');
+//    forall idx:ParticipantId | 
+//      && c.ValidParticipantId(idx)
+//      && v'.participants[idx].decision.Some?
+//      ensures
+//        || c.participants[idx].preference.No?  // one way to already know your decision
+//        || VoteMsg(idx, Yes) in v.network.sentMsgs // the other way
+//    {
+//      if step.CoordinatorStep? {
+//        assert
+//          || c.participants[idx].preference.No?  // one way to already know your decision
+//          || VoteMsg(idx, Yes) in v.network.sentMsgs // the other way
+//          ;
+//      } else {
+//        var participantStep :| ParticipantHost.NextStep(c.participants[step.idx], v.participants[step.idx], v'.participants[step.idx], participantStep, step.msgOps);
+//        if participantStep.VoteStep? {
+//          assert
+//            || c.participants[idx].preference.No?  // one way to already know your decision
+//            || VoteMsg(idx, Yes) in v.network.sentMsgs // the other way
+//            ;
+//        } else {
+//          assert step.msgOps.recv.Some?;
+//          var recvMsg := step.msgOps.recv.value;
+//          assert recvMsg.DecisionMsg?;
+//          assert CoordinatorHost.ObservesResult(c.coordinator, v.coordinator, recvMsg.decision);
+//          assert CoordinatorHost.AllVotesCollected(c.coordinator, v.coordinator);
+//          //assert VoteMsg(idx, recvMsg.decision) in 
+//          assert
+//            || c.participants[idx].preference.No?  // one way to already know your decision
+//            || VoteMsg(idx, Yes) in v.network.sentMsgs // the other way
+//            ;
+//        }
+//      }
+//    }
+    assert ParticipantsRecordingDecisionEitherPreferAbortOrSentVote(c, v');
+
+    forall idx:ParticipantId, msg | 
+      && c.ValidParticipantId(idx)
+      && msg in v'.network.sentMsgs
+      && msg.DecisionMsg?
+      && v'.participants[idx].decision.Some?
+      ensures v'.participants[idx].decision.value == msg.decision
+    {
+      if step.CoordinatorStep? {
+        var coordinatorStep :| CoordinatorHost.NextStep(c.coordinator, v.coordinator, v'.coordinator, coordinatorStep, step.msgOps);
+        if coordinatorStep.DecideStep? {
+          if msg in v.network.sentMsgs {
+            assert v'.participants[idx].decision.value == msg.decision;
+          } else {
+            // It's a new decision message.
+            // Note that there's only decision message; this one.
+            assert forall msg2 | msg2 in v'.network.sentMsgs && msg2.DecisionMsg? :: msg2 == msg;
+            // There are no decision messages in v.
+            assert forall msg2 | msg2 in v.network.sentMsgs && msg2.DecisionMsg? :: false;
+            // No participants have recorded a Commit decision.
+            assert (forall idx2:nat | c.ValidParticipantId(idx2) && v.participants[idx2].decision.Some?
+              :: v.participants[idx2].decision.value.Abort?);
+            if msg.decision.Commit? {
+              if v.participants[idx].decision.value.Abort? {
+                // invariant: participant wants abort && has decision => participant records abort decision
+                assert false;//left off here
+              }
+            }
+            assert v'.participants[idx].decision.value == msg.decision;
+          }
+        } else {
+          assert v'.participants[idx].decision.value == msg.decision;
+        }
+      } else {
+        var participantStep :| ParticipantHost.NextStep(c.participants[step.idx], v.participants[step.idx], v'.participants[step.idx], participantStep, step.msgOps);
+        assert v'.participants[idx].decision.value == msg.decision;
+      }
     }
+    assert ParticipantsRecordDecisionMsgs(c, v');
+
+    assume false;
+
+//    if step.CoordinatorStep? {
+//      var coordinatorStep :| CoordinatorHost.NextStep(c.coordinator, v.coordinator, v'.coordinator, coordinatorStep, step.msgOps);
+//      var decision :| AllAgreeWithDecision(c, v, decision);
+//      assert v'.participants == v.participants;
+//      if coordinatorStep.LearnVoteStep? {
+//        assert AllAgreeWithDecision(c, v', decision);
+//        assert Safety(c, v');
+//      } else if coordinatorStep.DecideStep? {
+//        if v.coordinator.decision.None? {
+//          assert AllAgreeWithDecision(c, v', Abort);
+//          assert AllAgreeWithDecision(c, v', Commit);
+//          assert CoordinatorHost.ObservesResult(c.coordinator, v.coordinator, decision);
+////          assert AllAgreeWithDecision(c, v', decision);
+//          assert Safety(c, v');
+//        } else {
+//          assert AllAgreeWithDecision(c, v', decision);
+//          assert Safety(c, v');
+//        }
+//      } else {
+//        assert AllAgreeWithDecision(c, v', decision);
+//        assert Safety(c, v');
+//      }
+//      assert Safety(c, v');
+//    } else {
+//      assume false;
+//      var participantStep :| ParticipantHost.NextStep(c.participants[step.idx], v.participants[step.idx], v'.participants[step.idx], participantStep, step.msgOps);
+//      assert Safety(c, v');
+//    }
 
     assert Safety(c, v');
   }
