@@ -88,6 +88,7 @@ module CoordinatorHost {
     && recvMsg.sender < c.hostCount
     // Record sender's vote.
     && v' == v.(votes := v.votes[recvMsg.sender := Some(recvMsg.vote)])
+    && msgOps.send.None?
   }
 
   // Pulled into predicate to mention from proof
@@ -310,6 +311,7 @@ module DistributedSystem {
 
 module Proof {
   import opened Types
+  import opened Library
   import opened DistributedSystem
 
   predicate AllAgreeWithDecision(c: Constants, v: Variables, decision: Decision)
@@ -389,55 +391,30 @@ module Proof {
     requires Next(c, v, v')
     ensures Inv(c, v')
   {
-//    assert NoConflictingCommitMsgs(c, v') by {
-//      assume false;
-//    }
-//
-//    assert ReadyLeadersDontConflictWithRecordedLeaders(c, v') by {
-//      assume false;
-//    }
-//
-//    assert CommitMsgsDontConflictWithRecordedLeaders(c, v') by {
-//      forall msg, host:nat
-//        |
-//          && msg in v'.network.sentMsgs
-//          && msg.CommitMsg?
-//          && c.ValidParticipantId(host)
-//          && v'.hosts[host].leader.Some?
-//        ensures msg.leader == v'.hosts[host].leader.value
-//      {
-//        var step :| NextStep(c, v, v', step);
-//        var idx := step.idx;
-//        var hoststep :| Host.NextStep(c.hosts[idx], v.hosts[idx], v'.hosts[idx], hoststep, step.msgOps);
-//        
-//        match hoststep
-//          case SendProposeReqStep => { assert msg.leader == v'.hosts[host].leader.value; }
-//          case SendProposeAckStep => { assert msg.leader == v'.hosts[host].leader.value; }
-//          case LearnAcceptStep => { assert msg.leader == v'.hosts[host].leader.value; }
-//          case LearnAndSendAbortStep => { assert msg.leader == v'.hosts[host].leader.value; }
-//          case RecvAbortStep => { assert msg.leader == v'.hosts[host].leader.value; }
-//          case SendCommitStep => {
-//            assert ReadyLeader(c, v, idx);
-//            assert msg.leader == v'.hosts[host].leader.value;
-//          }
-//          case RecvCommitStep => { assert msg.leader == v'.hosts[host].leader.value; }
-//      }
-//    }
-//
-//    assert Safety(c, v') by {
-////      forall hosta:nat, hostb:nat
-////        |
-////          && c.ValidParticipantId(hosta)
-////          && c.ValidParticipantId(hostb)
-////          && v'.hosts[hosta].leader.Some?
-////          && v'.hosts[hostb].leader.Some?
-////        ensures v'.hosts[hosta].leader == v'.hosts[hostb].leader
-////      {
-////        var step :| NextStep(c, v, v', step);
-////        var idx := step.idx;
-////        var hoststep :| Host.NextStep(c.hosts[idx], v.hosts[idx], v'.hosts[idx], hoststep, step.msgOps);
-////      }
-//    }
+    var step :| NextStep(c, v, v', step);
+
+    forall msg |
+      && msg in v'.network.sentMsgs
+      && msg.VoteMsg?
+      && c.ValidParticipantId(msg.sender)
+      ensures msg.vote == c.participants[msg.sender].preference
+    {
+      if step.CoordinatorStep? {
+        var coordinatorStep :| CoordinatorHost.NextStep(c.coordinator, v.coordinator, v'.coordinator, coordinatorStep, step.msgOps);
+        assert Some(msg) != step.msgOps.send;
+        assert msg in v.network.sentMsgs;
+        assert msg.vote == c.participants[msg.sender].preference;
+      } else {
+        assume false;
+        var participantStep :| ParticipantHost.NextStep(c.participants[step.idx], v.participants[step.idx], v'.participants[step.idx], participantStep, step.msgOps);
+        assert msg in v.network.sentMsgs;
+        assert msg.vote == c.participants[msg.sender].preference;
+      }
+    }
+
+    assert VoteMessagesAgreeWithParticipantPreferences(c, v');
+    assume DecisionMsgsAgreeWithDecision(c, v');
+    assume Safety(c, v');
   }
 
   lemma InvImpliesSafety(c: Constants, v: Variables)
