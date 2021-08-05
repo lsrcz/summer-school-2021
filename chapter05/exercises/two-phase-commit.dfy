@@ -3,21 +3,43 @@
  *
  * (TODO Manos provide slide link. Slides are on the web, but only behind a sleazy scraper site.)
  *
- * Coordinator sends VOTE-REQ to all participants.
- * Each participant i sends back vote_i to coordinator.
+ * 2-Phase Commit Protocol english design doc:
+ *
+ * 1, Coordinator sends VOTE-REQ to all participants.
+ * 2. Each participant i sends back vote_i to coordinator.
  *   If vote_i=No then i sets decision_i := Abort.
- * Coordinator collects votes.
+ * 3. Coordinator collects votes.
  *   If all votes are yes then coordinator sets decision_c := Commit and sends Commit to all participants.
  *   Else coordinator sets decision_c := Abort and sends Abort to all participants who voted yes.
- * Participants receiving Commit set decision_i := Commit
+ * 4. Participants receiving Commit set decision_i := Commit
  *   (The slide is delightfully poorly specified. "else decision_i := Abort"!? When else? As soon as
  *   it doesn't hear Commit!?)
  *
- * Model the Coordinator and Participants as separate host types, since they have unrelated state & behavior.
- * Model the Participants as each having a constant preferred value that they'll vote for; 2PC learns
- * whether the Participants all prefer a Yes vote.
- * Because we're assuming no host failure, the coordinator can simply wait until every vote has been
- * cast to compute its decision.
+ * 2PC should satisfy the Atomic Commit specification. English design doc:
+ *
+ * AC-1: All processes that reach a decision reach the same one.
+ * AC-2: A process cannot reverse its decision after it has reached one.
+ * AC-3: The Commit decision can only be reached if all processes prefer Yes.
+ * AC-4: If all processes prefer Yes, then the decision must be Commit.
+ * AC-5: All processes eventually decide.
+ *
+ * NOTE: Don't bother trying to model AC-5: it's a liveness property, not a safety property,
+ * so we're leaving it out of scope for this course.
+ * Don't bother trying to model AC-2: it's hard to state with the tools you have right now.
+ *
+ * Modeling suggestions:
+ *
+ * Model the Coordinator and Participants as separate host types, since they
+ * have unrelated state & behavior.
+ *
+ * Model the Participants as each having a constant preferred value that
+ * they'll vote for; 2PC learns whether the Participants all prefer a Yes vote.
+ *
+ * Because we're assuming no host failure, the coordinator can simply wait
+ * until every vote has been cast to compute its decision.
+ *
+ * After building the model, define the Safety predicate as AC1 && AC3 && AC4, then prove
+ * it inductive by adding invariants and fixing bugs in your 2PC protocol model.
  */
 
 include "../../library/library.dfy"
@@ -429,6 +451,10 @@ module Proof {
     requires Next(c, v, v')
     ensures Inv(c, v')
   {
+    // The body of this lemma got really big (expanding foralls, case splits,
+    // testing asserts) while I was figuring out what invariants were missing
+    // ... and fixing a couple of errors in the protocol definition itself.
+    // Afterward, nearly all of that text could be deleted.
     var step :| NextStep(c, v, v', step);   // Witness
     assert Safety(c, v');
   }
