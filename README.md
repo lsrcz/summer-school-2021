@@ -73,6 +73,6 @@ The `chapter` directories contain:
 
 * `hint/`: If you get stuck on an exercise, peek into the corresponding hint file. Avoid looking in here if you want to avoid spoilers!
 
-* `solution/': If you get really stuck, look for solutions here. Again, spoiler warning.
+* `solution/`: If you get really stuck, look for solutions here. Again, spoiler warning.
 
 Files in a directory are numbered to indicate the order they're meant to be read.  There is no chapter01/exercise17.dfy because there is a chapter01/demo17.
