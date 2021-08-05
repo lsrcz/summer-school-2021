@@ -405,20 +405,6 @@ module Proof {
     )
   }
 
-  predicate ParticipantsRecordingDecisionEitherPreferAbortOrSentVote(c: Constants, v: Variables)
-    requires c.WF()
-    requires v.WF(c)
-  {
-    (forall idx:ParticipantId | 
-      && c.ValidParticipantId(idx)
-      && v.participants[idx].decision.Some?
-      :: (
-        || c.participants[idx].preference.No?  // one way to already know your decision
-        || VoteMsg(idx, Yes) in v.network.sentMsgs // the other way
-      )
-    )
-  }
-
   predicate ParticipantsRecordDecisionMsgs(c: Constants, v: Variables)
     requires c.WF()
     requires v.WF(c)
@@ -441,7 +427,6 @@ module Proof {
     && VoteMessagesAgreeWithParticipantPreferences(c, v)
     && CoordinatorStateSupportedByVote(c, v)
     && DecisionMsgsAgreeWithDecision(c, v)
-    && ParticipantsRecordingDecisionEitherPreferAbortOrSentVote(c, v)
     && ParticipantsRecordDecisionMsgs(c, v)
     && Safety(c, v)
   }
@@ -461,16 +446,6 @@ module Proof {
     ensures Inv(c, v')
   {
     var step :| NextStep(c, v, v', step);
-
-
-//    assert VoteMessagesAgreeWithParticipantPreferences(c, v');
-
-//    assert DecisionMsgsAgreeWithDecision(c, v');
-
-//    assert ParticipantsRecordingDecisionEitherPreferAbortOrSentVote(c, v');
-
-//    assert ParticipantsRecordDecisionMsgs(c, v');
-
     assert Safety(c, v');
   }
 
