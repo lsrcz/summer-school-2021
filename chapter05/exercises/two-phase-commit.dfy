@@ -405,21 +405,6 @@ module Proof {
     )
   }
 
-  predicate ParticipantsRecordDecisionMsgs(c: Constants, v: Variables)
-    requires c.WF()
-    requires v.WF(c)
-    // I pulled this conjunction into a named predicate because Dafny warned of
-    // no trigger for the exists.
-  {
-    (forall idx:ParticipantId, msg | 
-      && c.ValidParticipantId(idx)
-      && msg in v.network.sentMsgs
-      && msg.DecisionMsg?
-      && v.participants[idx].decision.Some?
-      :: v.participants[idx].decision.value == msg.decision
-    )
-  }
-
   predicate Inv(c: Constants, v: Variables)
   {
     && c.WF()
@@ -427,7 +412,6 @@ module Proof {
     && VoteMessagesAgreeWithParticipantPreferences(c, v)
     && CoordinatorStateSupportedByVote(c, v)
     && DecisionMsgsAgreeWithDecision(c, v)
-    && ParticipantsRecordDecisionMsgs(c, v)
     && Safety(c, v)
   }
 
@@ -445,7 +429,7 @@ module Proof {
     requires Next(c, v, v')
     ensures Inv(c, v')
   {
-    var step :| NextStep(c, v, v', step);
+    var step :| NextStep(c, v, v', step);   // Witness
     assert Safety(c, v');
   }
 
