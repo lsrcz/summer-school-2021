@@ -319,23 +319,56 @@ module Proof {
   import opened Library
   import opened DistributedSystem
 
-  predicate AllAgreeWithDecision(c: Constants, v: Variables, decision: Decision)
+  predicate AllWithDecisionAgreeWithThisOne(c: Constants, v: Variables, decision: Decision)
     requires c.WF()
     requires v.WF(c)
     // I pulled this conjunction into a named predicate because Dafny warned of
     // no trigger for the exists.
   {
     && (v.coordinator.decision.Some? ==> v.coordinator.decision.value == decision)
-    && (forall idx:ParticipantId | c.ValidParticipantId(idx) && v.participants[idx].decision.Some?
+    && (forall idx:ParticipantId
+      | c.ValidParticipantId(idx) && v.participants[idx].decision.Some?
       :: v.participants[idx].decision.value == decision)
   }
+
+  predicate SafetyAC1(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    // All hosts that reach a decision reach the same one
+    || AllWithDecisionAgreeWithThisOne(c, v, Commit)
+    || AllWithDecisionAgreeWithThisOne(c, v, Abort)
+  }
+
+  // AC2 is sort of a history predicate; we're going to ignore it.
+
+  predicate SafetyAC3(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    && (exists idx:ParticipantId
+      :: c.ValidParticipantId(idx) && c.participants[idx].preference.No?)
+      ==> AllWithDecisionAgreeWithThisOne(c, v, Abort)
+  }
+
+  predicate SafetyAC4(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    && (forall idx:ParticipantId
+        | c.ValidParticipantId(idx) :: c.participants[idx].preference.Yes?)
+      ==> AllWithDecisionAgreeWithThisOne(c, v, Commit)
+  }
+
+  // AC5 is a liveness proprety, we're definitely going to ignore it.
 
   predicate Safety(c: Constants, v: Variables)
     requires c.WF()
     requires v.WF(c)
   {
-    // There's some decision everybody can agree on.
-    exists decision :: AllAgreeWithDecision(c, v, decision)
+    && SafetyAC1(c, v)
+    && SafetyAC3(c, v)
+    && SafetyAC4(c, v)
   }
 
   predicate VoteMessagesAgreeWithParticipantPreferences(c: Constants, v: Variables)
@@ -384,6 +417,8 @@ module Proof {
   }
 
   predicate ParticipantsRecordingDecisionEitherPreferAbortOrSentVote(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
   {
     (forall idx:ParticipantId | 
       && c.ValidParticipantId(idx)
@@ -428,8 +463,8 @@ module Proof {
     ensures Inv(c, v)
   {
     // Nobody has agreed with anything yet, so they agree with both.
-    assert AllAgreeWithDecision(c, v, Commit); // witness.
-    assert AllAgreeWithDecision(c, v, Abort); // witness.
+    assert AllWithDecisionAgreeWithThisOne(c, v, Commit); // witness.
+    assert AllWithDecisionAgreeWithThisOne(c, v, Abort); // witness.
   }
 
   lemma InvInductive(c: Constants, v: Variables, v': Variables)
