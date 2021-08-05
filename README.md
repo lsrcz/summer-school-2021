@@ -57,6 +57,12 @@ Now you can edit files using your preferred native OS editor under the work/
 directory, and verify them with Dafny from the terminal that's running the
 docker image.
 
+The docker-based command-line Dafny installation above is offered as a
+portable, simple way to get started.  There do exist snazzy real-time Dafny
+integrations for IDEs (Visual Studio, VSCode) and editors (Emacs, Vim).  You
+are certainly welcome to install Dafny natively and integrate it with your
+editor if you prefer.
+
 # STOP HERE!
 
 If you're preparing for the summer camp, stop here! The first set of exercises
