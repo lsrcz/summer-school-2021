@@ -62,6 +62,34 @@ module Types {
     | DecisionMsg(decision: Decision)
 }
 
+// A proposed AC refinement target
+/*
+module AtomicCommit {
+  datatype Constants = Constants(preferences: seq<Vote>)
+  datatype Variables = Variables(
+    coordinator_decision: Option<Decision>, participant_decisions: seq<Option<Decision>>)
+
+  // This simple model works because we are failure-free, so there's no nondeterminism
+  // that would be resolved by an arbitrary decision at the coordinator.
+  function UltimateDecision() : Decision
+  {
+    if (forall idx :: c.preferences[idx].Yes?) then Commit else Abort
+  }
+
+  predicate ParticipantLearns(idx: nat)
+  {
+    && v.participant_decisions[idx].None?
+    && v' == v.(participant_decisions := v.participant_decisions[idx := UltimateDecision()])
+  }
+
+  predicate CoordinatorLearns(idx: nat)
+  {
+    && v.participant_decisions[idx].None?
+    && v' == v.(coordinator_decision := UltimateDecision())
+  }
+}
+*/
+
 //#instructor Player 1
 module NetIfc {
   import opened Library
