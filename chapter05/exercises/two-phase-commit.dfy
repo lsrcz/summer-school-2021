@@ -18,14 +18,14 @@
  * 2PC should satisfy the Atomic Commit specification. English design doc:
  *
  * AC-1: All processes that reach a decision reach the same one.
- * AC-2: A process cannot reverse its decision after it has reached one.
  * AC-3: The Commit decision can only be reached if all processes prefer Yes.
  * AC-4: If all processes prefer Yes, then the decision must be Commit.
- * AC-5: All processes eventually decide.
  *
- * NOTE: Don't bother trying to model AC-5: it's a liveness property, not a safety property,
- * so we're leaving it out of scope for this course.
- * Don't bother trying to model AC-2: it's hard to state with the tools you have right now.
+ * Note that the full Atomic Commit spec includes these additional properties,
+ * but you should ignore them for this exercise:
+ * AC-2: (stability) A process cannot reverse its decision after it has reached one.
+ *       (best modeled with refinement)
+ * AC-5: (liveness) All processes eventually decide.
  *
  * Modeling suggestions:
  *
@@ -37,6 +37,8 @@
  *
  * Because we're assuming no host failure, the coordinator can simply wait
  * until every vote has been cast to compute its decision.
+ * Don't bother optimizing for the case where an abort has been voted and hence
+ * the coordinator doesn't really need to wait for every vote.
  *
  * After building the model, define the Safety predicate as AC1 && AC3 && AC4, then prove
  * it inductive by adding invariants and fixing bugs in your 2PC protocol model.
@@ -44,7 +46,7 @@
 
 include "../../library/library.dfy"
 
-// Player 2
+//#instructor Player 2
 module Types {
   type ParticipantId = nat
 
@@ -60,14 +62,41 @@ module Types {
     | DecisionMsg(decision: Decision)
 }
 
-// Player 1
+//#instructor Player 1
 module NetIfc {
   import opened Library
   import opened Types
   datatype MessageOps = MessageOps(recv:Option<Message>, send:Option<Message>)
 }
 
-// Player 2
+module Network {
+  import opened Types
+  import opened NetIfc
+
+  datatype Constants = Constants  // no constants for network
+
+  // Network state is the set of messages ever sent. Once sent, we'll
+  // allow it to be delivered over and over.
+  // (We don't have packet headers, so duplication, besides being realistic,
+  // also doubles as how multiple parties can hear the message.)
+  datatype Variables = Variables(sentMsgs:set<Message>)
+
+  predicate Init(c: Constants, v: Variables)
+  {
+    && v.sentMsgs == {}
+  }
+
+  predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
+  {
+    // Only allow receipt of a message if we've seen it has been sent.
+    && (msgOps.recv.Some? ==> msgOps.recv.value in v.sentMsgs)
+    // Record the sent message, if there was one.
+    && v'.sentMsgs ==
+      v.sentMsgs + if msgOps.send.None? then {} else { msgOps.send.value }
+  }
+}
+
+//#instructor Player 2
 module CoordinatorHost {
   import opened Types
   import opened Library
@@ -217,33 +246,7 @@ module ParticipantHost {
   }
 }
 
-module Network {
-  import opened Types
-  import opened NetIfc
-
-  datatype Constants = Constants  // no constants for network
-
-  // Network state is the set of messages ever sent. Once sent, we'll
-  // allow it to be delivered over and over.
-  // (We don't have packet headers, so duplication, besides being realistic,
-  // also doubles as how multiple parties can hear the message.)
-  datatype Variables = Variables(sentMsgs:set<Message>)
-
-  predicate Init(c: Constants, v: Variables)
-  {
-    && v.sentMsgs == {}
-  }
-
-  predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
-  {
-    // Only allow receipt of a message if we've seen it has been sent.
-    && (msgOps.recv.Some? ==> msgOps.recv.value in v.sentMsgs)
-    // Record the sent message, if there was one.
-    && v'.sentMsgs ==
-      v.sentMsgs + if msgOps.send.None? then {} else { msgOps.send.value }
-  }
-}
-
+//#instructor Player 1
 module DistributedSystem {
   import opened Types
   import opened NetIfc
@@ -312,6 +315,7 @@ module DistributedSystem {
     && v'.coordinator == v.coordinator
   }
 
+  // JayNF
   datatype Step =
     | CoordinatorStep(msgOps: MessageOps)
     | ParticipantStep(idx: ParticipantId, msgOps: MessageOps)
@@ -384,6 +388,7 @@ module Proof {
 
   // AC5 is a liveness proprety, we're definitely going to ignore it.
 
+  //#instructor Player 1
   predicate Safety(c: Constants, v: Variables)
     requires c.WF()
     requires v.WF(c)
