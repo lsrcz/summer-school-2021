@@ -21,7 +21,10 @@ lemma ExplainEvenNumbers(x:int) returns (b:int)
   ensures b*2 == x
 {
   // return b by assigning it.
+//#exercise  b := x/3;
+//#start-elide
   b := x/2;
+//#end-elide
 }
 
 predicate AlternateEven(x:int)

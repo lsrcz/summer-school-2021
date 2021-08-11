@@ -7,6 +7,9 @@ include "lib_directions.dfy"
 
 lemma TwoWrongsDontMakeARight(d:Direction)
 {
+//#exercise  assert TurnLeft(TurnLeft(TurnLeft(d))) == TurnRight(TurnRight(d));
+//#start-elide
   assert TurnLeft(TurnLeft(d)) == TurnRight(TurnRight(d));
+//#end-elide
 }
 

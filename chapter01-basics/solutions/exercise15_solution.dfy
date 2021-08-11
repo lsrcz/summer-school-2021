@@ -16,8 +16,12 @@ lemma IsThisSetFinite()
   // Now we get:
   // Error: a set comprehension must produce a finite set, but
   // Dafny's heuristics can't figure out how to produce a bounded set of values for 'x'
+//#exercise  var modestEvens := set x | IsModest(x) && IsEven(x);
+//#exercise  assert modestEvens == {0,2,4,6,8};
+//#start-elide
 //  var modestEvens := set x | IsModest(x) && IsEven(x);
 //  assert modestEvens == {0,2,4,6,8};
+//#end-elide
 }
 
 // Comment out the preceding lemma so we can proceed.

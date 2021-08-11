@@ -16,7 +16,10 @@ datatype Point = PointCtor(x:int, y:int)
 
 function subtractPoints(tip:Point, tail:Point) : Point
 {
+//#exercise  PointCtor(tip.x - tail.x, tip.y - tail.x)
+//#start-elide
   PointCtor(tip.x - tail.x, tip.y - tail.y)
+//#end-elide
 }
 
 lemma PointArithmetic()
@@ -28,6 +31,9 @@ lemma PointArithmetic()
   // objects, so the one we get back from the function must be equal
   // (identical) to the one we construct manually. There's no implicit
   // user-overridable Equals() method; these are platonic mathematical objects.
+
+  // This exercise is a little harder than the previous ones; take a moment
+  // to investigate it carefully!
   assert subtractPoints(a, b) == PointCtor(-1, 6);
 }
 

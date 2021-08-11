@@ -9,11 +9,14 @@ lemma Forall()
   assert forall x:int :: x+x == 2*x;
 }
 
-// Remember this critter from example10? We can rewrite it in a forall.
+// Remember this critter from exercise10? We can rewrite it in a forall.
 lemma AnotherForall()
 {
   // "Two wrongs don't make a right, but ..."
+//#exercise  assert forall d :: TurnLeft(TurnLeft(TurnLeft(d))) == TurnRight(TurnRight(d));
+//#start-elide
   assert forall d :: TurnLeft(TurnLeft(d)) == TurnRight(TurnRight(d));
+//#end-elide
 }
 
 // Here's there-exists, forall's evil twin.
@@ -25,7 +28,10 @@ lemma TryThatCheeseOnASandwich()
   // To proceed, replace 'assert' with 'assume', and move on to the
   // next lemma to read about how to solve it.
   // If the '?' syntax is surprising, go re-read lib_directions.dfy.
+//#exercise  assert forall o1:Order :: o1.Appetizer?
+//#start-elide
   assume forall o1:Order :: o1.Appetizer?
+//#end-elide
     ==> exists o2:Order :: o2.Sandwich? && o1.cheese == o2.cheese;
 }
 
@@ -47,7 +53,10 @@ lemma CheeseTakeTwo()
     // But how? What's missing is that Dafny needs a "witness" to the
     // there-exists. We need to show an expression that satisfies the
     // body of the exists. Try uncommenting these lines:
+//#exercise//    var o3 := Sandwich(Ham, o1.cheese);
+//#start-elide
     var o3 := Sandwich(Ham, o1.cheese);
+//#end-elide
 //    assert o3.Sandwich? && o1.cheese == o3.cheese;
     // Simply *mentioning* an Order that satisfies the predicate
     // on o2 above is enough for Dafny to see the proof; once we mention

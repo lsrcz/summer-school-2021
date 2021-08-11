@@ -5,10 +5,15 @@ method FindMax(a:array<int>) returns (maxIndex:nat)
 {
     var j:nat := 0;
     maxIndex := 0;
-    while(j < a.Length) 
+    while(j < a.Length)
+//#exercise        invariant true
+//#exercise        invariant true
+//#exercise        invariant true
+//#start-elide
         invariant j <= a.Length
         invariant maxIndex < a.Length
         invariant forall k:nat | k<j :: a[k] <= a[maxIndex]
+//#end-elide
     {
         if(a[maxIndex] < a[j]) {
             maxIndex := j;

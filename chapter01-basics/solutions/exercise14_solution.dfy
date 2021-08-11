@@ -21,5 +21,8 @@ lemma Maps()
   var replaceMap := doubleMap[3 := 7];
   assert replaceMap[1] == 2;
   assert replaceMap[2] == 4;
+//#exercise  assert replaceMap[3] == 6;
+//#start-elide
   assert replaceMap[3] == 7;
+//#end-elide
 }

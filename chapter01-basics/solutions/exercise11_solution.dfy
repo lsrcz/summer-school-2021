@@ -19,6 +19,7 @@ datatype GraphicsAlign = Square | Round
 // it has how many instances?
 // (That's the exercise, to answer that question. No Dafny required.)
 datatype PageElement = Text(t:TextAlign) | Graphics(g:GraphicsAlign)
+//#start-elide
 
 // The answer is 11:
 // There are 9 TextAligns.
@@ -70,3 +71,4 @@ lemma subsetCardinality<T>(a:set<T>, b:set<T>)
     }
   }
 }
+//#end-elide

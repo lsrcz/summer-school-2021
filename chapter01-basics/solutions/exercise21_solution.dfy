@@ -2,12 +2,23 @@ predicate IsSorted(s:seq<int>) {
     forall i:nat,j:nat | i<j<|s| :: s[i] <= s[j]
 }
 
+// The BinarySearch method below is a "simplified" binary search, which should return
+// the index of the first element of the haystack that is >= to the needle.
+// (If the needle is present, this should be the index of the needle)
+
 method BinarySearch(haystack:array<int>, needle:int) returns (index:nat)
     requires IsSorted(haystack[..])
+//#exercise    ensures false // real spec should go here
+//#exercise    ensures false // real spec should go here
+//#exercise    ensures false // real spec should go here
+//#start-elide
     ensures index <= haystack.Length
     ensures forall i:nat | i<index :: haystack[i] < needle
     ensures forall i:nat | index<=i<haystack.Length :: needle <= haystack[i]
+//#end-elide
 {
+//#exercise    return 0; 
+//#start-elide
     var low:nat := 0;
     var high:nat := haystack.Length;
      
@@ -25,8 +36,10 @@ method BinarySearch(haystack:array<int>, needle:int) returns (index:nat)
         
     }
     return low; 
+//#end-elide
 }
 
+// The test method below helps you confirm that you wrote a meaningful specification
 method Test()
 {
     var a:array<int> := new int[5];

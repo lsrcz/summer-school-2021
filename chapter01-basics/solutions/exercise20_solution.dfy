@@ -5,6 +5,8 @@ predicate IsSorted(s:seq<int>) {
 method IsArraySorted(a:array<int>) returns (b:bool)
     ensures b <==> IsSorted(a[..])
 {
+//#exercise    return true;
+//#start-elide
     if(a.Length < 2) {
         return true;
     }
@@ -19,5 +21,6 @@ method IsArraySorted(a:array<int>) returns (b:bool)
         k := k+1;
     }
     return true;
+//#end-elide
 }
 

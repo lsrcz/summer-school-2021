@@ -12,6 +12,9 @@ lemma AlgebraicLunch()
     Pizza(Ham, Olive)
     };
   // Fix this assertion. Hint: The two pizzas are the same element of the datatype.
+//#exercise  assert |meal| == 3;
+//#start-elide
   assert |meal| == 2;
+//#end-elide
 }
 
