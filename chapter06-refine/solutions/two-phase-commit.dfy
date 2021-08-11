@@ -62,6 +62,81 @@ module Types {
     | DecisionMsg(decision: Decision)
 }
 
+module AtomicCommit {
+  import opened Types
+  import opened Library
+
+  datatype Constants = Constants(participantCount: nat, preferences:seq<Vote>)
+  {
+    predicate WF() {
+      && |preferences| == participantCount
+    }
+    predicate ValidParticipant(idx: ParticipantId) { idx < participantCount }
+
+  }
+  datatype Variables = Variables(coordinatorDecision: Option<Decision>, 
+                                 participantDecisions: seq<Option<Decision>>)
+  {
+    predicate WF(c: Constants) {
+      && |participantDecisions| == c.participantCount
+    }
+  }
+  
+  function UltimateDecision(c: Constants) : Decision
+    requires c.WF()
+  {
+    if (forall idx:ParticipantId | idx < c.participantCount :: c.preferences[idx] == Yes) then Commit else Abort
+  }
+
+  predicate Init(c: Constants, v: Variables) 
+  {
+    && c.WF()
+    && v.WF(c)
+    && (forall idx:ParticipantId | idx < c.participantCount :: v.participantDecisions[idx].None?)
+  }
+
+  predicate ParticipantLearnsDecision(c: Constants, v: Variables, v': Variables, idx: ParticipantId)
+  {
+    && c.WF()
+    && v.WF(c)
+    && v'.WF(c)
+    && c.ValidParticipant(idx)
+    && v.participantDecisions[idx].None?  // enforces one-time decision property
+    && v' == v.(participantDecisions := v.participantDecisions[idx := Some(UltimateDecision(c))])
+  }
+
+  predicate CoordinatorLearnsDecision(c: Constants, v: Variables, v': Variables)
+  {
+    && c.WF()
+    && v.WF(c)
+    && v'.WF(c)
+    && v.coordinatorDecision.None?  // enforces one-time decision property
+    && v' == v.(coordinatorDecision := Some(UltimateDecision(c)))
+  }
+
+  // JayNF
+  datatype Step = 
+    | ParticipantLearnsStep(idx:ParticipantId)
+    | CoordinatorLearnsStep()
+  
+  predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
+  {
+    && c.WF()
+    && v.WF(c)
+    && v'.WF(c)
+    && (
+      match step
+        case ParticipantLearnsStep(idx) => ParticipantLearnsDecision(c, v, v', idx)
+        case CoordinatorLearnsStep() => CoordinatorLearnsDecision(c, v, v')
+      )
+  }
+
+  predicate Next(c: Constants, v: Variables, v': Variables)
+  {
+    exists step :: NextStep(c, v, v', step)
+  }
+}
+
 //#instructor Player 1
 module NetIfc {
   import opened Library
@@ -471,93 +546,17 @@ module Proof {
   }
 }
 
-module AtomicCommit {
-  import opened Types
-  import opened Library
-  import Network
-
-  datatype Constants = Constants(participantCount: nat, preferences:seq<Vote>)
-  {
-    predicate WF() {
-      && |preferences| == participantCount
-    }
-    predicate ValidParticipant(idx: ParticipantId) { idx < participantCount }
-
-  }
-  datatype Variables = Variables(coordinatorDecision: Option<Decision>, 
-                                 participantDecisions: seq<Option<Decision>>)
-  {
-    predicate WF(c: Constants) {
-      && |participantDecisions| == c.participantCount
-    }
-  }
-  
-  function UltimateDecision(c: Constants) : Decision
-    requires c.WF()
-  {
-    if (forall idx:ParticipantId | idx < c.participantCount :: c.preferences[idx] == Yes) then Commit else Abort
-  }
-
-  predicate Init(c: Constants, v: Variables) 
-  {
-    && c.WF()
-    && v.WF(c)
-    && (forall idx:ParticipantId | idx < c.participantCount :: v.participantDecisions[idx].None?)
-  }
-
-  predicate ParticipantLearnsDecision(c: Constants, v: Variables, v': Variables, idx: ParticipantId)
-  {
-    && c.WF()
-    && v.WF(c)
-    && v'.WF(c)
-    && c.ValidParticipant(idx)
-    && v.participantDecisions[idx].None?  // enforces one-time decision property
-    && v' == v.(participantDecisions := v.participantDecisions[idx := Some(UltimateDecision(c))])
-  }
-
-  predicate CoordinatorLearnsDecision(c: Constants, v: Variables, v': Variables)
-  {
-    && c.WF()
-    && v.WF(c)
-    && v'.WF(c)
-    && v.coordinatorDecision.None?  // enforces one-time decision property
-    && v' == v.(coordinatorDecision := Some(UltimateDecision(c)))
-  }
-
-  // JayNF
-  datatype Step = 
-    | ParticipantLearnsStep(idx:ParticipantId)
-    | CoordinatorLearnsStep()
-  
-  predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
-  {
-    && c.WF()
-    && v.WF(c)
-    && v'.WF(c)
-    && (
-      match step
-        case ParticipantLearnsStep(idx) => ParticipantLearnsDecision(c, v, v', idx)
-        case CoordinatorLearnsStep() => CoordinatorLearnsDecision(c, v, v')
-      )
-  }
-
-  predicate Next(c: Constants, v: Variables, v': Variables)
-  {
-    exists step :: NextStep(c, v, v', step)
-  }
-}
-
 abstract module RefinementTheorem {
   import opened Types
   import opened Library
   import opened DistributedSystem
   import AtomicCommit
 
-  function ConstantsAbstraction(constants: DistributedSystem.Constants) : AtomicCommit.Constants
+  function ConstantsAbstraction(c: DistributedSystem.Constants) : AtomicCommit.Constants
 
-  function VariablesAbstraction(constants: DistributedSystem.Constants, variables: DistributedSystem.Variables) : AtomicCommit.Variables
+  function VariablesAbstraction(c: DistributedSystem.Constants, v: DistributedSystem.Variables) : AtomicCommit.Variables
 
-  predicate Inv(constants: DistributedSystem.Constants, variables: DistributedSystem.Variables)
+  predicate Inv(c: DistributedSystem.Constants, v: DistributedSystem.Variables)
 
   lemma RefinementInit(c: DistributedSystem.Constants, v: DistributedSystem.Variables)
     requires DistributedSystem.Init(c, v)
@@ -570,4 +569,16 @@ abstract module RefinementTheorem {
     ensures Inv(c, v')
     ensures AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v'))
 
+}
+
+module RefinementProof refines RefinementTheorem {
+  import opened Types
+  import opened Library
+  import opened DistributedSystem
+  import opened AtomicCommit
+
+  function ConstantsAbstraction(constants: DistributedSystem.Constants) : AtomicCommit.Constants
+  {
+    
+  }
 }
