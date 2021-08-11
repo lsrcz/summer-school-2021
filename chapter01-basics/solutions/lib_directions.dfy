@@ -1,1 +1,0 @@
-../exercises/lib_directions.dfy
