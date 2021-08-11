@@ -3,21 +3,22 @@ predicate IsSorted(s:seq<int>)
   forall i :: 0 <= i < |s|-1 ==> s[i] <= s[i+1]
 }
 
+//#start-elide
 predicate SortSpec(input:seq<int>, output:seq<int>)
 {
   && IsSorted(output)
   && multiset(output) == multiset(input)
 }
 
-//lemma SequenceConcat(s:seq<int>, pivot:int)
-//  requires 0<=pivot<|s|
-//  ensures s[..pivot] + s[pivot..] == s
-//{
-//}
-
+//#end-elide
 method merge_sort(input:seq<int>) returns (output:seq<int>)
+//#exercise  ensures IsSorted(output)
+//#start-elide
   ensures SortSpec(input, output)
+//#end-elide
 {
+//#exercise  // Supply the body.
+//#start-elide
   if |input| <= 1 {
     output := input;
   } else {
@@ -40,15 +41,20 @@ method merge_sort(input:seq<int>) returns (output:seq<int>)
 //      multiset(input);
 //    }
   }
+//#end-elide
 }
 
 method merge(a:seq<int>, b:seq<int>) returns (output:seq<int>)
   requires IsSorted(a)
   requires IsSorted(b)
-//  ensures IsSorted(output)
+//#exercise  ensures IsSorted(output)
+//#start-elide
   ensures SortSpec(a+b, output)
   //decreases |a|+|b|
+//#end-elide
 {
+//#exercise  // Supply the body.
+//#start-elide
   var ai := 0;
   var bi := 0;
   output := [];
@@ -92,10 +98,13 @@ method merge(a:seq<int>, b:seq<int>) returns (output:seq<int>)
 //    multiset(a) + multiset(b);
 //    multiset(a + b);
 //  }
+//#end-elide
 }
+//#start-elide
 
 method fast_sort(input:seq<int>) returns (output:seq<int>)
 //  ensures SortSpec(input, output)
 {
   output := [1, 2, 3];
 }
+//#end-elide

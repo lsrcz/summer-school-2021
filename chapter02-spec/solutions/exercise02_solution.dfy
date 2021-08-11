@@ -16,6 +16,8 @@ method test_prime(i:nat) returns (result:bool)
   requires 1<i
   ensures result == IsPrime(i)
 {
+//#exercise  // Fill in the body.
+//#start-elide
   var f := 2;
   while (f < i)
     // This loop invariant completes an inductive proof of the
@@ -36,6 +38,7 @@ method test_prime(i:nat) returns (result:bool)
     f := f + 1;
   }
   return true;
+//#end-elide
 }
 
 method Main()
