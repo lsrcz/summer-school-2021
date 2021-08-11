@@ -5,7 +5,7 @@ method FindMax(a:array<int>) returns (maxIndex:nat)
 {
     var j:nat := 0;
     maxIndex := 0;
-    while(j < a.Length) 
+    while(j < a.Length)
         invariant true
         invariant true
         invariant true
