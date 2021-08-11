@@ -38,4 +38,3 @@ method CheckIfSortedTree(t:Tree) returns (sorted:bool)
 {
     return false;
 }
-
