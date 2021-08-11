@@ -12,7 +12,7 @@ lemma ExperimentsWithSequences()
   assert fibo[0] == 1;
   assert fibo[8] == 34;
   assert fibo[9] == 55;
-  
+
   // A slice of a sequence is a sequence.
   // The left argument is inclusive, the right exclusive.
   assert fibo[2..4] == [2,3];
