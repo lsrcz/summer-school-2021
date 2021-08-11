@@ -7,12 +7,12 @@ predicate IsSorted(s:seq<int>) {
 // (If the needle is present, this should be the index of the needle)
 
 method BinarySearch(haystack:array<int>, needle:int) returns (index:nat)
-    requires IsSorted(haystack[..]) 
+    requires IsSorted(haystack[..])
     ensures false // real spec should go here
     ensures false // real spec should go here
     ensures false // real spec should go here
 {
-    return 0; 
+    return 0;
 }
 
 // The test method below helps you confirm that you wrote a meaningful specification
