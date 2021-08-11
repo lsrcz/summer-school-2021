@@ -55,13 +55,17 @@ predicate Next(v:Variables, v':Variables) {
 predicate Safety(v:Variables) {
   // What's a good definition of safety for the lock server? No two clients
   // have the lock simultaneously. Write that here.
+//#exercise  false
+//#start-elide
   forall i,j ::
     (&& 0 <= i < |v.clients|
     && 0 <= j < |v.clients|
     && v.clients[i].Acquired?
     && v.clients[j].Acquired?) ==> i == j
+//#end-elide
 }
 
+//#start-elide
 // Safety doesn't care what server thinks, but to get an *inductive* invariant,
 // we need to ensure the server doesn't fall out of sync with the clients'
 // beliefs.
@@ -69,9 +73,13 @@ predicate ServerAgreesClients(v:Variables) {
   v.server.Unlocked? <==> (forall id | 0 <= id < |v.clients| :: v.clients[id].Released?)
 }
 
+//#end-elide
 predicate Inv(v:Variables) {
+//#exercise  true  // probably not strong enough. :v)
+//#start-elide
   && Safety(v)
   && ServerAgreesClients(v)
+//#end-elide
 }
 
 // Here's your obligation. Probably easiest to break this up into three
@@ -81,6 +89,7 @@ lemma SafetyTheorem(v:Variables, v':Variables)
   ensures Inv(v) && Next(v, v') ==> Inv(v')
   ensures Inv(v) ==> Safety(v)
 {
+//#start-elide
   if Inv(v) && Next(v, v') {
     var step :| NextStep(v, v', step);        // give a variable name ("step") to what happened in Next
     if step.AcquireStep? {                    // case analysis
@@ -91,4 +100,5 @@ lemma SafetyTheorem(v:Variables, v':Variables)
 //      assert Inv(v');
     }
   }
+//#end-elide
 }

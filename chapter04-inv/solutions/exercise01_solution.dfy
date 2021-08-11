@@ -31,7 +31,10 @@ module Crawler {
   }
 
   predicate Inv(v:Variables) {
+//#exercise    true  // probably not strong enough. :v)
+//#start-elide
     v.x + v.y >= 5
+//#end-elide
   }
 
   // Here's your obligation. Probably easiest to break this up into three
