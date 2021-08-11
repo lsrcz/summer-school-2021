@@ -28,8 +28,13 @@ def transform_solution(input_filename, output_filename):
   for input_line in input_lines:
     output_line = input_line
     if input_line.startswith("//#exercise"):
+      # exercise substitution
       output_line = input_line[11:]
+    elif input_line.startswith("//#elide"):
+      # single-line elision
+      output_line = None
     elif input_line.startswith("//#start-elide"):
+      # multi-line elision
       elide = True
       output_line = None
     elif input_line.startswith("//#end-elide"):

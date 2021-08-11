@@ -1,10 +1,10 @@
 // Coke Machine
-//#instructor This is the first state machine specification example.
-//#instructor Its complexity is about the same as the library. We 
-//#instructor provide the boilerplate for everything, but leave the state
-//#instructor transitions as an exercise.
-//#instructor It comes with a safety proof that we expect the students to use as an 
-//#instructor oracle for whether they got the state transitions right.
+//#elide This is the first state machine specification example.
+//#elide Its complexity is about the same as the library. We 
+//#elide provide the boilerplate for everything, but leave the state
+//#elide transitions as an exercise.
+//#elide It comes with a safety proof that we expect the students to use as an 
+//#elide oracle for whether they got the state transitions right.
 
 // You are asked to define the state machine for a coke vending machine.
 // The machine starts empty and has a maximum capacity of 7 cokes. 
@@ -16,20 +16,29 @@ datatype Constants = Constants(capacity:int)
 datatype CokeMachine = CokeMachine(numCokes:int)
 
 predicate Init(c:Constants, v:CokeMachine) {
+//#exercise    true // Replace me
+//#start-elide
     && c.capacity == 7
     && v.numCokes == 0
+//#end-elide
 }
 
 predicate Purchase(c:Constants, v:CokeMachine, v':CokeMachine) {
+//#exercise    true // Replace me
+//#start-elide
     && v.numCokes > 0
     && v'.numCokes == v.numCokes - 1
+//#end-elide
 }
 
 predicate Restock(c:Constants, v:CokeMachine, v':CokeMachine, numRestock:int) 
 {
+//#exercise    true // Replace me
+//#start-elide
     && numRestock >= 0
     && v.numCokes + numRestock <= c.capacity
     && v'.numCokes == v.numCokes + numRestock
+//#end-elide
 }
 
 predicate Next(c:Constants, v:CokeMachine, v':CokeMachine) {
