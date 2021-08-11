@@ -21,7 +21,10 @@ lemma DoubleIsLikePlus()
 {
   assert Double(6) == 6 + 6;
   {
+//#exercise    assert Double(-2) == 4;
+//#start-elide
     assert Double(-2) == -4;
+//#end-elide
   }
 }
 
@@ -29,5 +32,8 @@ lemma DoubleIsLikePlus()
 // *any* x, not just a particular literal.
 lemma foo4(x:int)
 {
+//#exercise  assert Double(x) == x + x + x;
+//#start-elide
   assert Double(x) == x + x;
+//#end-elide
 }
