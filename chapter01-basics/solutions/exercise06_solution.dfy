@@ -24,6 +24,9 @@ lemma SomeAssertionsAboutSets()
   // |x| on a set is cardinality.
   // (set<T> is always finite; there is another type iset<T> for
   // possibly-infinite sets.)
+//#exercise  assert |happySet| == 7;
+//#start-elide
   assert |happySet| == 6;
+//#end-elide
 }
 

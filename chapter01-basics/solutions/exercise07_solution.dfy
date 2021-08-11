@@ -11,8 +11,11 @@ lemma ExperimentsWithSequences()
   assert |fibo| == 9;
   assert fibo[0] == 1;
   assert fibo[8] == 34;
+//#exercise  assert fibo[9] == 55;
+//#start-elide
   assert fibo[7] == 21;
-  
+//#end-elide
+
   // A slice of a sequence is a sequence.
   // The left argument is inclusive, the right exclusive.
   assert fibo[2..4] == [2,3];
@@ -22,10 +25,17 @@ lemma ExperimentsWithSequences()
   assert fibo[..3] == [1,1,2];
   assert fibo[7..] == [21,34];
 
+//#exercise  assert |fibo[2..5]| == 4;
+//#start-elide
   assert |fibo[2..5]| == 3;
+//#end-elide
 
+//#exercise  assert false; // Comment out this line, and uncomment the next to proceed. Read the error message. Fix it.
+//#exercise//  assert fibo[5..6] == 8;
+//#start-elide
   //assert false; // Comment out this line, and uncomment the next to proceed. Read the error message. Fix it.
   assert fibo[5..6] == [8];
+//#end-elide
 
   // The type of fibo is seq<int>.
   // Here, we explicitly declare the type of `copy`. In previous examples, the
@@ -42,6 +52,9 @@ lemma ExperimentsWithSequences()
   // |expr| below is sequence-length
   assert |seqOfSets| == 3;
   // Type checking means the |expr| below is a set-cardinality operator.
+//#exercise  assert |seqOfSets[1]| == 3;
+//#start-elide
   assert |seqOfSets[1]| == 2;
+//#end-elide
 }
 
