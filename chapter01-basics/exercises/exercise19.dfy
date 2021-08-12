@@ -1,3 +1,6 @@
+//#title FindMax
+//#desc Loop invariants.
+
 method FindMax(intary:array<int>) returns (maxIndex:nat)
     requires intary.Length > 0
     ensures maxIndex<intary.Length
