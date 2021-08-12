@@ -78,4 +78,4 @@ The `chapter` directories contain:
 
 * [exercises.md](exercises.md) is an index of the exercises.
 
-Files in a directory are numbered to indicate the order they're meant to be read.  There is no chapter01-basics/exercise17.dfy because there is a chapter01/demo17.
+Files in a directory are numbered to indicate the order they're meant to be read.  There is no chapter01-basics/exercise17.dfy because there is a chapter01-basics/demo17.
