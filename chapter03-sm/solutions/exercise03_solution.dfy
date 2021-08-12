@@ -1,4 +1,4 @@
-//#title Single-Server Lock Service Spec
+//#title Single-Server Lock Service Model
 //#desc A complex state machine
 //#desc including a Safety predicate on the state type.
 
@@ -67,5 +67,14 @@ predicate Next(v:Variables, v':Variables) {
 }
 
 predicate Safety(v:Variables) {
-//#exercise  true  // Change me to the important property!
+  // What's a good definition of safety for the lock server? No two clients
+  // have the lock simultaneously. Write that here.
+//#exercise  false
+//#start-elide
+  forall i,j ::
+    (&& 0 <= i < |v.clients|
+    && 0 <= j < |v.clients|
+    && v.clients[i].Acquired?
+    && v.clients[j].Acquired?) ==> i == j
+//#end-elide
 }

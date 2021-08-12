@@ -4,7 +4,7 @@
 
 // We provide a correct spec for the lock server here, but leave you
 // to define the Safety property to be proven.
-// You are welcome to prove correct your own specification from chapter03,
+// You are welcome to prove correct your own model from chapter03,
 // but note that may be too hard or too easy if your spec is broken.
 
 datatype ServerGrant = Unlocked | Client(id: nat)
@@ -62,16 +62,12 @@ predicate Next(v:Variables, v':Variables) {
 }
 
 predicate Safety(v:Variables) {
-  // What's a good definition of safety for the lock server? No two clients
-  // have the lock simultaneously. Write that here.
-//#exercise  false
-//#start-elide
+  // No two clients have the lock simultaneously.
   forall i,j ::
     (&& 0 <= i < |v.clients|
     && 0 <= j < |v.clients|
     && v.clients[i].Acquired?
     && v.clients[j].Acquired?) ==> i == j
-//#end-elide
 }
 
 //#start-elide
