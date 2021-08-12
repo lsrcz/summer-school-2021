@@ -30,11 +30,8 @@ newgrp docker
 If everything is working, you should see:
 
 ```bash
-Dafny 2.3.0.10506
-test.dfy(6,0): Error BP5003: A postcondition might not hold on this return path.
-
-test.dfy(5,12): Related location: This is the postcondition that might not hold.
-
+/home/dafnyserver/test.dfy(6,0): Error: A postcondition might not hold on this return path.
+/home/dafnyserver/test.dfy(5,12): Related location: This is the postcondition that might not hold.
 Execution trace:
     (0,0): anon0
 
@@ -80,7 +77,5 @@ The `chapter` directories contain:
 * `hint/`: If you get stuck on an exercise, peek into the corresponding hint file. Avoid looking in here if you want to avoid spoilers!
 
 * `solution/`: If you get really stuck, look for solutions here. Again, spoiler warning.
-
-* [exercises.md](exercises.md) is an index of the exercises.
 
 Files in a directory are numbered to indicate the order they're meant to be read.  There is no chapter01/exercise17.dfy because there is a chapter01/demo17.

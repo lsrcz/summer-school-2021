@@ -36,11 +36,19 @@
 
 - [`chapter01-basics/exercises/exercise18.dfy`](chapter01-basics/exercises/exercise18.dfy)<br>**Fibo** -- Recursion challenge.
 
+- [`chapter01-basics/exercises/exercise19.dfy`](chapter01-basics/exercises/exercise19.dfy)
+
+- [`chapter01-basics/exercises/exercise20.dfy`](chapter01-basics/exercises/exercise20.dfy)
+
 - [`chapter01-basics/exercises/exercise21.dfy`](chapter01-basics/exercises/exercise21.dfy)<br>**Binary Search** -- Method implementation; writing a Hoare spec.
 
 - [`chapter01-basics/exercises/exercise22.dfy`](chapter01-basics/exercises/exercise22.dfy)<br>**Binary Tree Is Sorted** -- Prove an implementation meets its spec. Practice with proof diagnosis.
 
 - [`chapter01-basics/exercises/exercise23.dfy`](chapter01-basics/exercises/exercise23.dfy)<br>**Binary Tree Search** -- Implement search in a binary tree and prove it works. Practice with proof diagnosis.
+
+- [`chapter01-basics/exercises/lib_directions.dfy`](chapter01-basics/exercises/lib_directions.dfy)
+
+- [`chapter01-basics/exercises/lib_lunch.dfy`](chapter01-basics/exercises/lib_lunch.dfy)
 
 ## chapter02-spec
 
@@ -66,5 +74,13 @@
 
 ## chapter05-dsm
 
+- [`chapter05-dsm/exercises/two-phase-commit.dfy`](chapter05-dsm/exercises/two-phase-commit.dfy)
+
 ## chapter06-refine
+
+- [`chapter06-refine/exercises/atomic-commit-spec.dfy`](chapter06-refine/exercises/atomic-commit-spec.dfy)
+
+- [`chapter06-refine/exercises/exercise01.dfy`](chapter06-refine/exercises/exercise01.dfy)<br>**Synchronous KV Store** -- Build a refinement from a protocol (distributed sharded state) to a specification (a logically-centralized abstract map).
+
+- [`chapter06-refine/exercises/two-phase-commit-impl.dfy`](chapter06-refine/exercises/two-phase-commit-impl.dfy)
 
