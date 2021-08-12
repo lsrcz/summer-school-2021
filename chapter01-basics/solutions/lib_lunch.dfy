@@ -1,4 +1,4 @@
-//#title Library for exercises 12 & 13
+//#desc Library for exercises 12 & 13
 
 // This whole product-sum idea gets clearer when we use both powers
 // (struct/product, union/sum) at the same time.

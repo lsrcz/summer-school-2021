@@ -1,4 +1,4 @@
-//#title Library for exercises 10 & 13
+//#desc Library for exercises 10 & 13
 
 // This is tagged union, a "sum" datatype.
 datatype Direction = North() | East() | South() | West()
