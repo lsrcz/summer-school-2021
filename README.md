@@ -47,7 +47,7 @@ mkdir work
 cd work
 docker container run -t -i --mount src="`pwd`",target=/home/dafnyserver/work,type=bind --workdir /home/dafnyserver/work jonhdotnet/summer_school:1.1 /bin/bash
 git clone https://github.com/GLaDOS-Michigan/summer-school-2021.git
-cd summer-school-2021/chapter01
+cd summer-school-2021/chapter01-basics
 ```
 
 Now you can edit files using your preferred native OS editor under the work/
@@ -76,8 +76,6 @@ The `chapter` directories contain:
 
 * `hint/`: If you get stuck on an exercise, peek into the corresponding hint file. Avoid looking in here if you want to avoid spoilers!
 
-* `solution/`: If you get really stuck, look for solutions here. Again, spoiler warning.
-
 * [exercises.md](exercises.md) is an index of the exercises.
 
-Files in a directory are numbered to indicate the order they're meant to be read.  There is no chapter01/exercise17.dfy because there is a chapter01/demo17.
+Files in a directory are numbered to indicate the order they're meant to be read.  There is no chapter01-basics/exercise17.dfy because there is a chapter01/demo17.
