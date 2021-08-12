@@ -144,7 +144,7 @@ lemma PseudoLiveness(c:Constants, pi:nat) returns (behavior:seq<Variables>)
     requires pi == 1
     ensures 0 < |behavior| 
     ensures Init(c, behavior[0])
-    ensures forall behavior | 0 <= behavior < |behavior|-1 :: Next(c, behavior[behavior], behavior[behavior+1])
+    ensures forall i | 0 <= i < |behavior|-1 :: Next(c, behavior[i], behavior[i+1])
     ensures WellFormed(c, behavior[|behavior|-1])
     ensures PhilosopherHasBothForks(c, behavior[|behavior|-1], pi)
 {
