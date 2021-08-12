@@ -27,21 +27,35 @@ module Types {
   // references" errors.
   type Key(==, !new)
 
+  // Dafny's map<> type requires a finite domain. It also has an imap<> type that
+  // allows an infinite domain, but we'd like to defer that complexity, so we'll stick
+  // with finite maps.
+  // Looking forward to the implementation, we can start with no keys stored, but we
+  // are going to need to store "shard authority" information (which host is responsible
+  // for each key) for every possible key, so eventually we're going to need to
+  // have maps that contain every possible key. If we want to avoid imap<> for now,
+  // then we'll need a finite keyspace. `type Key` is uninterpreted, and there's
+  // no easy way to declare that it's finite.
+  // (Side note: actually there is; Dafny has a predicate type constructor, but it's
+  // flaky and sometimes crashes Dafny, so we're going to steer clear of it, too.)
 
-  // We'd like to use Dafny's map<> type, which requires a finite domain.
-  // Unfortunately, there's no way to say "there are only finitely many Keys".
-  // So instead we assume there's a (finite-sized) set of Key objects that
-
-  // Assume a finite domain (set is finite) of possible keys, so we
-  // can use (finite) maps. Dafny also offers infinite maps, but those
-  // bring another twist, so let's just use what's familiar for now.
+  // So, just as we assume there's some space of Keys, let's assume a function that
+  // defines a finite subset of those keys as the keyspace we're actually going to use.
+  // We leave the function body absent, which means it's an axiom: we don't provide
+  // the function, but assume such a function exists.
+  // Everywhere we use a Key, we'll also require it to be in AllKeys().
   function AllKeys() : set<Key>
 
   type Value(==, !new)
 
+  // To keep the API simple, we omit the concept of "the absence of a key", and instead
+  // define a DefaultValue that keys have until Inserted otherwise.
   function DefaultValue() : Value
-    // No body -> this is an axiom.
+    // Again, No body -> this is an axiom.
 
+  // This map comprehension assigns the DefaultValue to every key in the finite AllKeys()
+  // keyspace. (Note that here the finite-ness of AllKeys() is now essential, as
+  // it shows Dafny than the map has finite domain.)
   function InitialMap() : map<Key, Value>
   {
     map key | key in AllKeys() :: DefaultValue()
