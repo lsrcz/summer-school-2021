@@ -1,8 +1,8 @@
 //#title Binary Search
 //#desc Method implementation; writing a Hoare spec.
 
-predicate IsSorted(s:seq<int>) {
-    forall i:nat,j:nat | i<j<|s| :: s[i] <= s[j]
+predicate IsSorted(seqint:seq<int>) {
+    forall i:nat,j:nat | i<j<|seqint| :: seqint[i] <= seqint[j]
 }
 
 // The BinarySearch method below is a "simplified" binary search, which should return
@@ -21,11 +21,11 @@ method BinarySearch(haystack:array<int>, needle:int) returns (index:nat)
 // The test method below helps you confirm that you wrote a meaningful specification
 method Test()
 {
-    var a:array<int> := new int[5];
-    a[0],a[1],a[2],a[3],a[4] := 3,6,7,7,10;
-    var ret := BinarySearch(a,7);
+    var ary:array<int> := new int[5];
+    ary[0],ary[1],ary[2],ary[3],ary[4] := 3,6,7,7,10;
+    var ret := BinarySearch(ary,7);
     assert(ret == 2);
-    var ret2 := BinarySearch(a,8);
+    var ret2 := BinarySearch(ary,8);
     assert(ret2 == 4);
 }
 

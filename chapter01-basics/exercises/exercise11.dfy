@@ -18,4 +18,4 @@ datatype GraphicsAlign = Square | Round
 // So if we make another tagged-union (sum) of TextAlign or GraphicsAlign,
 // it has how many instances?
 // (That's the exercise, to answer that question. No Dafny required.)
-datatype PageElement = Text(t:TextAlign) | Graphics(g:GraphicsAlign)
+datatype PageElement = Text(ta:TextAlign) | Graphics(ga:GraphicsAlign)

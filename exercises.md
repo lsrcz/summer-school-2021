@@ -44,11 +44,11 @@
 
 ## chapter02-spec
 
-- [`chapter02-spec/exercises/exercise01.dfy`](chapter02-spec/exercises/exercise01.dfy)<br>**IsPrime** -- Basic specification
+- [`chapter02-spec/exercises/exercise01.dfy`](chapter02-spec/exercises/exercise01.dfy)<br>**IsPrime I** -- Basic specification
 
-- [`chapter02-spec/exercises/exercise02.dfy`](chapter02-spec/exercises/exercise02.dfy)<br>**IsPrime** -- Working with an implementation proof
+- [`chapter02-spec/exercises/exercise02.dfy`](chapter02-spec/exercises/exercise02.dfy)<br>**IsPrime II** -- Working with an implementation proof
 
-- [`chapter02-spec/exercises/exercise03.dfy`](chapter02-spec/exercises/exercise03.dfy)<br>**IsSorted** -- More specification practice.
+- [`chapter02-spec/exercises/exercise03.dfy`](chapter02-spec/exercises/exercise03.dfy)<br>**Merge Sort** -- More specification practice.
 
 ## chapter03-sm
 

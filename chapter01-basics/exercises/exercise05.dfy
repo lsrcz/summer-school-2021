@@ -2,9 +2,9 @@
 
 // This predicate takes a set of integers as an argument.
 // set<T> is a built-in templated type.
-predicate HasSevenAndNotNine(a:set<int>)
+predicate HasSevenAndNotNine(intset:set<int>)
 {
-  7 in a && 9 !in a
+  7 in intset && 9 !in intset
 }
 
 lemma TryOutSomeSetLiterals()

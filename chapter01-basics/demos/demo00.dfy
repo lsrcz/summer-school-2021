@@ -4,12 +4,12 @@
 datatype Node = Node
 datatype Graph = Graph
 datatype Path = Path
-function NodesWithOddDegree(g:Graph) : set<Node>
-predicate EulerWalk(g:Graph, p:Path)
+function NodesWithOddDegree(graph:Graph) : set<Node>
+predicate EulerWalk(graph:Graph, path:Path)
 
-lemma EulersGraph(g:Graph)
-  requires |NodesWithOddDegree(g)| > 2
-  ensures !exists p :: EulerWalk(g, p)
+lemma EulersGraph(graph:Graph)
+  requires |NodesWithOddDegree(graph)| > 2
+  ensures !exists path :: EulerWalk(graph, path)
 {
   assume false;
 }
@@ -22,17 +22,17 @@ lemma EulersGraph(g:Graph)
 // Let's use this power to catch *all* the implementation bugs
 // in your code: from low-level bugs like this one to high-level
 // semantic bugs.
-newtype uint32 = a:int | a < 0x1_0000_0000
-method IncrementU32(a:uint32) returns (b:uint32)
-  ensures b > a
+newtype uint32 = val:int | val < 0x1_0000_0000
+method IncrementU32(val:uint32) returns (out:uint32)
+  ensures out > val
 {
-  b := a + 1;
+  out := val + 1;
 }
 
-method IncrementInt(a:int) returns (b:int)
-  ensures b > a
+method IncrementInt(val:int) returns (output:int)
+  ensures output > val
 {
-  b := a + 1;
+  output := val + 1;
 }
 
 

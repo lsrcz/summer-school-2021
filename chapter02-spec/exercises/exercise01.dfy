@@ -1,7 +1,7 @@
-//#title IsPrime
+//#title IsPrime I
 //#desc Basic specification
 
-predicate IsPrime(i:nat)
+predicate IsPrime(candidate:nat)
 {
 }
 

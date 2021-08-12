@@ -5,8 +5,8 @@
 include "lib_directions.dfy"
 // Open and read lib_directions.dfy.
 
-lemma TwoWrongsDontMakeARight(d:Direction)
+lemma TwoWrongsDontMakeARight(dir:Direction)
 {
-  assert TurnLeft(TurnLeft(TurnLeft(d))) == TurnRight(TurnRight(d));
+  assert TurnLeft(TurnLeft(TurnLeft(dir))) == TurnRight(TurnRight(dir));
 }
 

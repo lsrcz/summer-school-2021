@@ -1,9 +1,9 @@
-predicate IsSorted(s:seq<int>) {
-    forall i:nat,j:nat | i<j<|s| :: s[i] <= s[j]
+predicate IsSorted(intseq:seq<int>) {
+    forall i:nat,j:nat | i<j<|intseq| :: intseq[i] <= intseq[j]
 }
 
-method IsArraySorted(a:array<int>) returns (b:bool)
-    ensures b <==> IsSorted(a[..])
+method IsArraySorted(intary:array<int>) returns (issorted:bool)
+    ensures issorted <==> IsSorted(intary[..])
 {
     return true;
 }

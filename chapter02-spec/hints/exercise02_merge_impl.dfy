@@ -1,20 +1,20 @@
-method merge(a:seq<int>, b:seq<int>) returns (output:seq<int>)
-  requires IsSorted(a)
-  requires IsSorted(b)
+method merge(seqa:seq<int>, seqb:seq<int>) returns (output:seq<int>)
+  requires IsSorted(seqa)
+  requires IsSorted(seqb)
   ensures IsSorted(output)
 {
-  var ai := 0;
-  var bi := 0;
+  var aidx := 0;
+  var bidx := 0;
   output := [];
-  while ai < |a| || bi < |b|
-    decreases |a|-ai + |b|-bi
+  while aidx < |seqa| || bidx < |seqb|
+    decreases |seqa|-aidx + |seqb|-bidx
   {
-    if ai == |a| || (bi < |b| && a[ai] > b[bi]) {
-      output := output + [b[bi]];
-      bi := bi + 1;
+    if aidx == |seqa| || (bidx < |seqb| && seqa[aidx] > seqb[bidx]) {
+      output := output + [seqb[bidx]];
+      bidx := bidx + 1;
     } else {
-      output := output + [a[ai]];
-      ai := ai + 1;
+      output := output + [seqa[aidx]];
+      aidx := aidx + 1;
     }
   } 
 }

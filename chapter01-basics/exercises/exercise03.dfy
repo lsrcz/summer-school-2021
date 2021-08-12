@@ -6,11 +6,11 @@
 
 // Run dafny on this file. See where it fails. Fix it.
 
-function Double(a:int) : int
+function Double(val:int) : int
 {
   // The body of a function is an expression context. No semicolon
   // at the end.
-  2 * a
+  2 * val
 }
 
 // A lemma is like a C++ method or C function (hence the statement context).
@@ -26,8 +26,8 @@ lemma DoubleIsLikePlus()
 }
 
 // A lemma can take arguments. This is one way to prove a statement about
-// *any* x, not just a particular literal.
-lemma foo4(x:int)
+// *any* value, not just a particular literal.
+lemma foo4(val:int)
 {
-  assert Double(x) == x + x + x;
+  assert Double(val) == val + val + val;
 }

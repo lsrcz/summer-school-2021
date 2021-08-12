@@ -14,20 +14,20 @@ predicate IsEven(x:int)
 
 // A lemma is like a C function; it can return values. Let's return a value
 // and then ensure a property of it.
-lemma ExplainEvenNumbers(x:int) returns (b:int)
+lemma ExplainEvenNumbers(x:int) returns (twocount:int)
   // This lemma doesn't work unless we know x is even.
   // This requires clause is a fact we get to assume inside the lemma.
   requires IsEven(x)
 // To export knowledge from a lemma, we declare it in an `ensures` clause.
-  ensures b*2 == x
+  ensures twocount*2 == x
 {
-  // return b by assigning it.
-  b := x/3;
+  // return twocount by assigning it.
+  twocount := x/3;
 }
 
 predicate AlternateEven(x:int)
 {
-  exists b :: b * 2 == x
+  exists twocount :: twocount * 2 == x
 }
 
 // Instead of hiding the thing we prove inside the body as an assert,

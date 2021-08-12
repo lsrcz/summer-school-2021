@@ -1,34 +1,34 @@
-function method fibo(i:nat) : nat
+function method fibo(val:nat) : nat
 {
-  if i == 0 then 0
-  else if i == 1 then 1
-  else fibo(i-2) + fibo(i-1)
+  if val == 0 then 0
+  else if val == 1 then 1
+  else fibo(val-2) + fibo(val-1)
 }
 
-method fastfibo(i:nat) returns (f:nat)
-  ensures fibo(i) == f
+method fastfibo(val:nat) returns (fibout:nat)
+  ensures fibo(val) == fibout
 {
-  if i==0 {
-    f := 0;
+  if val==0 {
+    fibout := 0;
     return;
   }
 
-  var a := 0;
-  var b := 1;
-  var j := 1;
+  var prevfib := 0;
+  var curfib := 1;
+  var idx := 1;
 
-  while j < i
-    invariant j <= i
-    invariant a == fibo(j-1)
-    invariant b == fibo(j)
+  while idx < val
+    invariant idx <= val
+    invariant prevfib == fibo(idx-1)
+    invariant curfib == fibo(idx)
   {
-    var c := a + b;
-    a := b;
-    b := c;
-    j := j + 1;
+    var nextfib := prevfib + curfib;
+    prevfib := curfib;
+    curfib := nextfib;
+    idx := idx + 1;
   }
 
-  f := b;
+  fibout := curfib;
 }
 
 lemma Check()
@@ -39,10 +39,10 @@ lemma Check()
 
 method Main()
 {
-  var x := 0;
-  while x < 50 {
-    var f := fastfibo(x);
-    print x, " ", f, "\n";
-    x := x + 1;
+  var val := 0;
+  while val < 50 {
+    var f := fastfibo(val);
+    print val, " ", f, "\n";
+    val := val + 1;
   }
 }

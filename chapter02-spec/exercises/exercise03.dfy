@@ -1,9 +1,9 @@
-//#title IsSorted
+//#title Merge Sort
 //#desc More specification practice.
 
-predicate IsSorted(s:seq<int>)
+predicate IsSorted(seqint:seq<int>)
 {
-  forall i :: 0 <= i < |s|-1 ==> s[i] <= s[i+1]
+  forall idx :: 0 <= idx < |seqint|-1 ==> seqint[idx] <= seqint[idx+1]
 }
 
 method merge_sort(input:seq<int>) returns (output:seq<int>)
@@ -12,9 +12,9 @@ method merge_sort(input:seq<int>) returns (output:seq<int>)
   // Supply the body.
 }
 
-method merge(a:seq<int>, b:seq<int>) returns (output:seq<int>)
-  requires IsSorted(a)
-  requires IsSorted(b)
+method merge(seqa:seq<int>, seqb:seq<int>) returns (output:seq<int>)
+  requires IsSorted(seqa)
+  requires IsSorted(seqb)
   ensures IsSorted(output)
 {
   // Supply the body.
