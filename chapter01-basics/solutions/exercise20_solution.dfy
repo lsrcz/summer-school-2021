@@ -1,24 +1,24 @@
-predicate IsSorted(s:seq<int>) {
-    forall i:nat,j:nat | i<j<|s| :: s[i] <= s[j]
+predicate IsSorted(intseq:seq<int>) {
+    forall i:nat,j:nat | i<j<|intseq| :: intseq[i] <= intseq[j]
 }
 
-method IsArraySorted(a:array<int>) returns (b:bool)
-    ensures b <==> IsSorted(a[..])
+method IsArraySorted(intary:array<int>) returns (issorted:bool)
+    ensures issorted <==> IsSorted(intary[..])
 {
 //#exercise    return true;
 //#start-elide
-    if(a.Length < 2) {
+    if(intary.Length < 2) {
         return true;
     }
-    var k:=0;
-    while(k<a.Length-1) 
-        invariant k <= a.Length-1
-        invariant forall i:nat,j:nat | i<j<k+1 :: a[i] <= a[j]
+    var idx:=0;
+    while(idx<intary.Length-1) 
+        invariant idx <= intary.Length-1
+        invariant forall i:nat,j:nat | i<j<idx+1 :: intary[i] <= intary[j]
     {
-        if(a[k] > a[k+1]) {
+        if(intary[idx] > intary[idx+1]) {
            return false;
         }
-        k := k+1;
+        idx := idx+1;
     }
     return true;
 //#end-elide

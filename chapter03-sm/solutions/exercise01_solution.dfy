@@ -44,7 +44,7 @@ predicate Restock(c:Constants, v:CokeMachine, v':CokeMachine, numRestock:int)
 
 predicate Next(c:Constants, v:CokeMachine, v':CokeMachine) {
     || Purchase(c, v, v')
-    || (exists n :: Restock(c, v, v', n))
+    || (exists num :: Restock(c, v, v', num))
 } 
 
 //==========================
@@ -66,7 +66,7 @@ lemma SafetyProof()
         if(Purchase(c, v, v')) {
             assert Inv(c, v');
         } else {
-            var n :| Restock(c, v, v', n);
+            var num :| Restock(c, v, v', num);
             assert Inv(c, v');
         }   
     }

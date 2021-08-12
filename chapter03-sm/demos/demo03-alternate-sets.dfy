@@ -131,20 +131,20 @@ lemma InductiveStep(v: Library, v': Library)
 // Dafny seems to be missing a heuristic to trigger this cardinality relation!
 // So I proved it. This should get fixed in dafny, or at least tucked into a
 // library! How embarrassing.
-lemma subsetCardinality<T>(a:set<T>, b:set<T>)
-  requires a <= b
-  ensures |a| <= |b|
+lemma subsetCardinality<T>(seta:set<T>, setb:set<T>)
+  requires seta <= setb
+  ensures |seta| <= |setb|
 {
-  if a == {} {
-    assert |a| <= |b|;
+  if seta == {} {
+    assert |seta| <= |setb|;
   } else {
-    var e :| e in a;
-    if e in b {
-      subsetCardinality(a - {e}, b - {e});
-      assert |a| <= |b|;
+    var element :| element in seta;
+    if element in setb {
+      subsetCardinality(seta - {element}, setb - {element});
+      assert |seta| <= |setb|;
     } else {
-      subsetCardinality(a - {e}, b);
-      assert |a| <= |b|;
+      subsetCardinality(seta - {element}, setb);
+      assert |seta| <= |setb|;
     }
   }
 }

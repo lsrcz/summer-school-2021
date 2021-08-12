@@ -1,13 +1,13 @@
 //#title Fibo
 //#desc Recursion challenge.
 
-function method fibo(i:nat) : nat
+function method fibo(val:nat) : nat
 {
 //#exercise  0
 //#start-elide
-  if i == 0 then 0
-  else if i == 1 then 1
-  else fibo(i-2) + fibo(i-1)
+  if val == 0 then 0
+  else if val == 1 then 1
+  else fibo(val-2) + fibo(val-1)
 //#end-elide
 }
 

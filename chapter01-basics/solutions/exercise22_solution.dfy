@@ -18,66 +18,66 @@ datatype Tree = Nil | Node(value:int, left:Tree, right:Tree)
 // New syntax:  a function method is just like any other function, except it
 // can be used in an "imperative" context (i.e., inside a method)
 
-function method TreeAsSequence(t:Tree) : seq<int>
+function method TreeAsSequence(tree:Tree) : seq<int>
 {
 //#exercise    [] // Replace me
 //#start-elide
-    if t.Nil? then []
-    else TreeAsSequence(t.left) + [t.value] + TreeAsSequence(t.right)
+    if tree.Nil? then []
+    else TreeAsSequence(tree.left) + [tree.value] + TreeAsSequence(tree.right)
 //#end-elide
 }
 
-predicate IsSortedTree(t:Tree) {
+predicate IsSortedTree(tree:Tree) {
 //#exercise    true // Replace me
 //#start-elide
-    if (t.Nil?)
+    if (tree.Nil?)
     then true
     else
-        && (forall j | 0 <= j < |TreeAsSequence(t.left)| :: TreeAsSequence(t.left)[j] <= t.value)
-        && (forall j | 0 <= j < |TreeAsSequence(t.right)| :: t.value <= TreeAsSequence(t.right)[j])
-        && IsSortedTree(t.left)
-        && IsSortedTree(t.right)
+        && (forall j | 0 <= j < |TreeAsSequence(tree.left)| :: TreeAsSequence(tree.left)[j] <= tree.value)
+        && (forall j | 0 <= j < |TreeAsSequence(tree.right)| :: tree.value <= TreeAsSequence(tree.right)[j])
+        && IsSortedTree(tree.left)
+        && IsSortedTree(tree.right)
 //#end-elide
 }
 
 // You may find it useful to relate your recursive definition of IsSortedTree to
 // a sequential representation of the tree structure
 
-predicate SequenceIsSorted(s:seq<int>) {
-    forall i:nat,j:nat | i<j<|s| :: s[i] <= s[j]
+predicate SequenceIsSorted(intseq:seq<int>) {
+    forall i:nat,j:nat | i<j<|intseq| :: intseq[i] <= intseq[j]
 }
 
-lemma SortedTreeMeansSortedSequence(t:Tree)
-    requires IsSortedTree(t)
-    ensures SequenceIsSorted(TreeAsSequence(t))
+lemma SortedTreeMeansSortedSequence(tree:Tree)
+    requires IsSortedTree(tree)
+    ensures SequenceIsSorted(TreeAsSequence(tree))
 {
 }
 
-method CheckIfSortedTree(t:Tree) returns (sorted:bool)
-    ensures sorted <==> IsSortedTree(t)
+method CheckIfSortedTree(tree:Tree) returns (sorted:bool)
+    ensures sorted <==> IsSortedTree(tree)
 {
 //#exercise    return false;
 //#start-elide
-    if (t.Nil?) {
+    if (tree.Nil?) {
         return true;
     } else {
-        var leftSorted := CheckIfSortedTree(t.left);
-        var rightSorted := CheckIfSortedTree(t.right);
+        var leftSorted := CheckIfSortedTree(tree.left);
+        var rightSorted := CheckIfSortedTree(tree.right);
         if (!leftSorted || !rightSorted) {
-            assert !IsSortedTree(t);
+            assert !IsSortedTree(tree);
             return false;
         } else {
-            var leftSeq := TreeAsSequence(t.left);
-            var rightSeq := TreeAsSequence(t.right);
-            var isValueAfterLeft:bool := |leftSeq| == 0 || leftSeq[|leftSeq|-1] <= t.value;
-            var isValueBeforeRight:bool := |rightSeq| == 0 || t.value <= rightSeq[0];
+            var leftSeq := TreeAsSequence(tree.left);
+            var rightSeq := TreeAsSequence(tree.right);
+            var isValueAfterLeft:bool := |leftSeq| == 0 || leftSeq[|leftSeq|-1] <= tree.value;
+            var isValueBeforeRight:bool := |rightSeq| == 0 || tree.value <= rightSeq[0];
             if(!isValueAfterLeft) {
                 return false;
             } else if (!isValueBeforeRight) {
                 return false;
             } else {
-                SortedTreeMeansSortedSequence(t.left);
-                SortedTreeMeansSortedSequence(t.right);
+                SortedTreeMeansSortedSequence(tree.left);
+                SortedTreeMeansSortedSequence(tree.right);
                 return true;
             }
         }

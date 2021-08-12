@@ -4,7 +4,7 @@
 
 
           // case analysis step 2:
-          // did dst take on k.ids[src], v.highest_heard[src], or
+          // did dst take on c.ids[src], v.highest_heard[src], or
           // v.highest_heard[dst]?
               // src now included in extended chord.
               // Covered by prior-state chord.

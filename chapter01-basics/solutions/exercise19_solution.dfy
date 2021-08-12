@@ -1,23 +1,23 @@
-method FindMax(a:array<int>) returns (maxIndex:nat)
-    requires a.Length > 0
-    ensures maxIndex<a.Length
-    ensures forall j:nat | j<a.Length :: a[j] <= a[maxIndex]
+method FindMax(intary:array<int>) returns (maxIndex:nat)
+    requires intary.Length > 0
+    ensures maxIndex<intary.Length
+    ensures forall idx:nat | idx<intary.Length :: intary[idx] <= intary[maxIndex]
 {
-    var j:nat := 0;
+    var idx:nat := 0;
     maxIndex := 0;
-    while(j < a.Length)
+    while(idx < intary.Length)
 //#exercise        invariant true
 //#exercise        invariant true
 //#exercise        invariant true
 //#start-elide
-        invariant j <= a.Length
-        invariant maxIndex < a.Length
-        invariant forall k:nat | k<j :: a[k] <= a[maxIndex]
+        invariant idx <= intary.Length
+        invariant maxIndex < intary.Length
+        invariant forall prioridx:nat | prioridx<idx :: intary[prioridx] <= intary[maxIndex]
 //#end-elide
     {
-        if(a[maxIndex] < a[j]) {
-            maxIndex := j;
+        if(intary[maxIndex] < intary[idx]) {
+            maxIndex := idx;
         }
-        j := j+1;
+        idx := idx+1;
     }
 }

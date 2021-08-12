@@ -1,19 +1,19 @@
-//#title IsPrime
+//#title IsPrime I
 //#desc Basic specification
 
 //#start-elide
-predicate divides(f:nat, i:nat)
-  requires 1<=f
+predicate divides(factor:nat, candidate:nat)
+  requires 1<=factor
 {
-  i % f == 0
+  candidate % factor == 0
 }
 
 //#end-elide
-predicate IsPrime(i:nat)
+predicate IsPrime(candidate:nat)
 {
 //#start-elide
-  && 1 < i
-  && forall f :: 1 < f < i ==> !divides(f, i)
+  && 1 < candidate
+  && forall factor :: 1 < factor < candidate ==> !divides(factor, candidate)
 //#end-elide
 }
 

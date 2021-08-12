@@ -98,16 +98,16 @@ predicate Next(c:Constants, v:Variables, v':Variables) {
 }
 
 //#start-elide
-function PhilosopherToTheLeftOf(c:Constants, i:nat) : nat 
+function PhilosopherToTheLeftOf(c:Constants, philosopher:nat) : nat 
     requires WellFormedConstants(c)
 {
-    (i+1) % c.tableSize
+    (philosopher+1) % c.tableSize
 }
 
-function PhilosopherToTheRightOf(c:Constants, i:nat) : nat 
+function PhilosopherToTheRightOf(c:Constants, philosopher:nat) : nat 
     requires WellFormedConstants(c)
 {
-    (i-1) % c.tableSize
+    (philosopher-1) % c.tableSize
 }
 
 // here is the safety property
@@ -139,20 +139,20 @@ predicate PhilosopherHasBothForks(c:Constants, v:Variables, pi:nat)
     && v.philosophers[pi].right
 }
 
-lemma PseudoLiveness(c:Constants, pi:nat) returns (b:seq<Variables>)
+lemma PseudoLiveness(c:Constants, pi:nat) returns (behavior:seq<Variables>)
     requires c.tableSize == 3
     requires pi == 1
-    ensures 0 < |b| 
-    ensures Init(c, b[0])
-    ensures forall i | 0 <= i < |b|-1 :: Next(c, b[i], b[i+1])
-    ensures WellFormed(c, b[|b|-1])
-    ensures PhilosopherHasBothForks(c, b[|b|-1], pi)
+    ensures 0 < |behavior| 
+    ensures Init(c, behavior[0])
+    ensures forall behavior | 0 <= behavior < |behavior|-1 :: Next(c, behavior[behavior], behavior[behavior+1])
+    ensures WellFormed(c, behavior[|behavior|-1])
+    ensures PhilosopherHasBothForks(c, behavior[|behavior|-1], pi)
 {
-    var s0 := Variables([Pair(false,false), Pair(false, false), Pair(false, false)]);
-    var s1 := Variables([Pair(false,false), Pair(true, false), Pair(false, false)]);
-    var s2 := Variables([Pair(false,false), Pair(true, true), Pair(false, false)]);
-    assert AcquireLeft(c, s0, s1, 1); // witness
-    assert AcquireRight(c, s1, s2, 1); // witness
-    b := [s0, s1, s2];
+    var state0 := Variables([Pair(false,false), Pair(false, false), Pair(false, false)]);
+    var state1 := Variables([Pair(false,false), Pair(true, false), Pair(false, false)]);
+    var state2 := Variables([Pair(false,false), Pair(true, true), Pair(false, false)]);
+    assert AcquireLeft(c, state0, state1, 1); // witness
+    assert AcquireRight(c, state1, state2, 1); // witness
+    behavior := [state0, state1, state2];
 }
 //#end-elide

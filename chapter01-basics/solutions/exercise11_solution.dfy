@@ -18,7 +18,7 @@ datatype GraphicsAlign = Square | Round
 // So if we make another tagged-union (sum) of TextAlign or GraphicsAlign,
 // it has how many instances?
 // (That's the exercise, to answer that question. No Dafny required.)
-datatype PageElement = Text(t:TextAlign) | Graphics(g:GraphicsAlign)
+datatype PageElement = Text(ta:TextAlign) | Graphics(ga:GraphicsAlign)
 //#start-elide
 
 // The answer is 11:
@@ -61,12 +61,12 @@ lemma subsetCardinality<T>(a:set<T>, b:set<T>)
   if a == {} {
     assert |a| <= |b|;
   } else {
-    var e :| e in a;
-    if e in b {
-      subsetCardinality(a - {e}, b - {e});
+    var elt :| elt in a;
+    if elt in b {
+      subsetCardinality(a - {elt}, b - {elt});
       assert |a| <= |b|;
     } else {
-      subsetCardinality(a - {e}, b);
+      subsetCardinality(a - {elt}, b);
       assert |a| <= |b|;
     }
   }

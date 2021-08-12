@@ -1,9 +1,9 @@
-//#title IsSorted
+//#title Merge Sort
 //#desc More specification practice.
 
-predicate IsSorted(s:seq<int>)
+predicate IsSorted(seqint:seq<int>)
 {
-  forall i :: 0 <= i < |s|-1 ==> s[i] <= s[i+1]
+  forall idx :: 0 <= idx < |seqint|-1 ==> seqint[idx] <= seqint[idx+1]
 }
 
 //#start-elide
@@ -47,13 +47,13 @@ method merge_sort(input:seq<int>) returns (output:seq<int>)
 //#end-elide
 }
 
-method merge(a:seq<int>, b:seq<int>) returns (output:seq<int>)
-  requires IsSorted(a)
-  requires IsSorted(b)
+method merge(seqa:seq<int>, seqb:seq<int>) returns (output:seq<int>)
+  requires IsSorted(seqa)
+  requires IsSorted(seqb)
 //#exercise  ensures IsSorted(output)
 //#start-elide
-  ensures SortSpec(a+b, output)
-  //decreases |a|+|b|
+  ensures SortSpec(seqa+seqb, output)
+  //decreases |seqa|+|seqb|
 //#end-elide
 {
 //#exercise  // Supply the body.
@@ -61,45 +61,45 @@ method merge(a:seq<int>, b:seq<int>) returns (output:seq<int>)
   var ai := 0;
   var bi := 0;
   output := [];
-  while ai < |a| || bi < |b|
-    invariant 0 <= ai <= |a|
-    invariant 0 <= bi <= |b|
-    invariant 0 < |output| && ai < |a| ==> output[|output|-1] <= a[ai]
-    invariant 0 < |output| && bi < |b| ==> output[|output|-1] <= b[bi]
+  while ai < |seqa| || bi < |seqb|
+    invariant 0 <= ai <= |seqa|
+    invariant 0 <= bi <= |seqb|
+    invariant 0 < |output| && ai < |seqa| ==> output[|output|-1] <= seqa[ai]
+    invariant 0 < |output| && bi < |seqb| ==> output[|output|-1] <= seqb[bi]
     invariant forall i :: 0 <= i < |output|-1 ==> output[i] <= output[i+1]
-    invariant multiset(output) == multiset(a[..ai]) + multiset(b[..bi])
-    decreases |a|-ai + |b|-bi
+    invariant multiset(output) == multiset(seqa[..ai]) + multiset(seqb[..bi])
+    decreases |seqa|-ai + |seqb|-bi
   {
     ghost var outputo := output;
     ghost var ao := ai;
     ghost var bo := bi;
-    if ai == |a| || (bi < |b| && a[ai] > b[bi]) {
-      output := output + [b[bi]];
+    if ai == |seqa| || (bi < |seqb| && seqa[ai] > seqb[bi]) {
+      output := output + [seqb[bi]];
       bi := bi + 1;
-      assert b[bo..bi] == [b[bo]];  // discovered by calc
+      assert seqb[bo..bi] == [seqb[bo]];  // discovered by calc
     } else {
-      output := output + [a[ai]];
+      output := output + [seqa[ai]];
       ai := ai + 1;
-      assert a[ao..ai] == [a[ao]];  // discovered by calc
+      assert seqa[ao..ai] == [seqa[ao]];  // discovered by calc
     }
-    assert a[..ai] == a[..ao] + a[ao..ai];  // discovered by calc
-    assert b[..bi] == b[..bo] + b[bo..bi];  // discovered by calc
+    assert seqa[..ai] == seqa[..ao] + seqa[ao..ai];  // discovered by calc
+    assert seqb[..bi] == seqb[..bo] + seqb[bo..bi];  // discovered by calc
 //    calc {
-//      multiset(a[..ai]) + multiset(b[..bi]);
-//      multiset(a[..ao] + a[ao..ai]) + multiset(b[..bo] + b[bo..bi]);
-//      multiset(a[..ao]) + multiset(a[ao..ai]) + multiset(b[..bo]) + multiset(b[bo..bi]);
-//      multiset(a[..ao]) + multiset(b[..bo]) + multiset(a[ao..ai]) + multiset(b[bo..bi]);
-//      multiset(outputo) + multiset(a[ao..ai]) + multiset(b[bo..bi]);
+//      multiset(seqa[..ai]) + multiset(seqb[..bi]);
+//      multiset(seqa[..ao] + seqa[ao..ai]) + multiset(seqb[..bo] + seqb[bo..bi]);
+//      multiset(seqa[..ao]) + multiset(seqa[ao..ai]) + multiset(seqb[..bo]) + multiset(seqb[bo..bi]);
+//      multiset(seqa[..ao]) + multiset(seqb[..bo]) + multiset(seqa[ao..ai]) + multiset(seqb[bo..bi]);
+//      multiset(outputo) + multiset(seqa[ao..ai]) + multiset(seqb[bo..bi]);
 //      multiset(output);
 //    }
   }
-  assert a == a[..ai];  // derived by calc
-  assert b == b[..bi];
+  assert seqa == seqa[..ai];  // derived by calc
+  assert seqb == seqb[..bi];
 //  calc {
 //    multiset(output);
-//    multiset(a[..ai]) + multiset(b[..bi]);
-//    multiset(a) + multiset(b);
-//    multiset(a + b);
+//    multiset(seqa[..ai]) + multiset(seqb[..bi]);
+//    multiset(seqa) + multiset(seqb);
+//    multiset(seqa + seqb);
 //  }
 //#end-elide
 }

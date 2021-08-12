@@ -1,9 +1,9 @@
 //#title More set tools
 
 // <= on sets is subset.
-predicate HasFourFiveSix(a:set<int>)
+predicate HasFourFiveSix(intset:set<int>)
 {
-  {6,5,4} <= a  // I can because they're sets!
+  {6,5,4} <= intset  // I can because they're sets!
 }
 
 lemma SomeAssertionsAboutSets()

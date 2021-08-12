@@ -13,14 +13,14 @@ lemma Forall()
 lemma AnotherForall()
 {
   // "Two wrongs don't make a right, but ..."
-//#exercise  assert forall d :: TurnLeft(TurnLeft(TurnLeft(d))) == TurnRight(TurnRight(d));
+//#exercise  assert forall dir :: TurnLeft(TurnLeft(TurnLeft(dir))) == TurnRight(TurnRight(dir));
 //#start-elide
-  assert forall d :: TurnLeft(TurnLeft(d)) == TurnRight(TurnRight(d));
+  assert forall dir :: TurnLeft(TurnLeft(dir)) == TurnRight(TurnRight(dir));
 //#end-elide
 }
 
 // Here's there-exists, forall's evil twin.
-// exists a :: P(a) == !forall a :: !P(a)
+// exists x :: P(x) == !forall x :: !P(x)
 lemma TryThatCheeseOnASandwich()
 {
   // Hey, neat. Dafny has a hard time proving exists. It needs

@@ -5,8 +5,8 @@ function TurnRight(direction:Direction) : Direction
 {
   // This function introduces two new bis of syntax.
   // First, the if-else expression: if <bool> then T else T
-  // Second, the e.Ctor? built-in predicate, which tests whether
-  // the datatype element `e` was built by `Ctor`.
+  // Second, the element.Ctor? built-in predicate, which tests whether
+  // the datatype `element` was built by `Ctor`.
   if direction.North?
     then East
   else if direction.East?
