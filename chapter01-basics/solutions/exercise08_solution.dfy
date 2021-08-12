@@ -1,4 +1,4 @@
-// Type synonyms.
+//#title Type synonyms
 
 // So by now you see me composing types and you're itching to
 // construct some of your own.

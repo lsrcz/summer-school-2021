@@ -1,4 +1,4 @@
-// Lemmas and assertions
+//#title Lemmas and assertions
 
 lemma IntegerOrdering()
 {

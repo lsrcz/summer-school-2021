@@ -99,11 +99,32 @@ class Element:
       # everything else goes in the same relative dir
       mkdir_and_copy(self.instructor_path(), self.student_path())
 
+    self.extract_docs()
+
   def test(self):
     if self.is_dafny_source():
       cmd = ["dafny", "/compile:0", "/vcsCores:6", self.instructor_path()]
       print(f"  -- {' '.join(cmd)}")
       return subprocess.call(cmd)==0
+
+  def extract_docs(self):
+    input_lines = [line.rstrip() for line in open(self.instructor_path()).readlines()]
+    self.title = " ".join([l.replace("//#title", "").strip()
+            for l in input_lines if l.startswith("//#title")])
+    self.description = " ".join([l.replace("//#desc", "").strip()
+            for l in input_lines if l.startswith("//#desc")])
+
+  def md_catalog_row(self):
+    if not(self.title or self.description):
+      return ""
+    path = f"{self.chapter}/{self.type}/{self.filename}"
+    row = f"- [`{path}`]({path})"
+    if self.title:
+      row += f"<br>**{self.title}**"
+    if self.description:
+      row += f" -- {self.description}"
+    row += "\n\n"
+    return row
 
 class Catalog:
   def __init__(self):
@@ -129,14 +150,30 @@ class Catalog:
       os.mkdir(output_chapter)
 
       for type in sorted(self.elements[chapter].keys()):
-        print(f"# chapter {chapter} type {type}")
+        #print(f"# chapter {chapter} type {type}")
         for element in sorted(self.elements[chapter][type]):
           dbg_count += 1
           #if dbg_count>12: return
           fun(element)
 
+  def get_elements(self):
+    element_list = []
+    self.foreach_element(lambda elt: element_list.append(elt))
+    return element_list
+
   def compile_elements(self):
     self.foreach_element(lambda elt: elt.compile())
+
+    catalog_filename = os.path.join(student_dir, "exercises.md")
+
+    chapter = None
+    with open(catalog_filename, "w") as fp:
+      fp.write("# Index of exercises\n\n")
+      for element in self.get_elements():
+        if element.chapter != chapter:
+          chapter = element.chapter
+          fp.write(f"## {chapter}\n\n")
+        fp.write(element.md_catalog_row())
 
   def test_elements(self):
     results = []

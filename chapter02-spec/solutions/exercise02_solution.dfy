@@ -1,3 +1,6 @@
+//#title IsPrime
+//#desc Working with an implementation proof
+
 predicate divides(f:nat, i:nat)
   requires 1<=f
 {

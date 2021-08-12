@@ -1,4 +1,4 @@
-// More with algebraic datatypes.
+//#title More with algebraic datatypes.
 
 // Begin by reading lunch.dfy! I extracted it to a separate file because
 // we'll use it again later.

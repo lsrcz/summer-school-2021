@@ -1,3 +1,6 @@
+//#title Binary Search
+//#desc Method implementation; writing a Hoare spec.
+
 predicate IsSorted(s:seq<int>) {
     forall i:nat,j:nat | i<j<|s| :: s[i] <= s[j]
 }

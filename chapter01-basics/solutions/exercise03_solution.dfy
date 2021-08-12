@@ -1,4 +1,4 @@
-// Functions
+//#title Functions
 
 // A `function` is a mathematical function.
 // This one has a domain of the integers and the range is (within) the

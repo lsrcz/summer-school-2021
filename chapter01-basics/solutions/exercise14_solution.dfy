@@ -1,4 +1,4 @@
-// Set comprehensions, maps
+//#title Set comprehensions, maps
 
 predicate IsEven(x:int)
 {

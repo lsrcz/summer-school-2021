@@ -1,3 +1,6 @@
+//#title IsSorted
+//#desc More specification practice.
+
 predicate IsSorted(s:seq<int>)
 {
   forall i :: 0 <= i < |s|-1 ==> s[i] <= s[i+1]

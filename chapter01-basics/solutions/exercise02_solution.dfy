@@ -1,4 +1,4 @@
-// Boolean logic
+//#title Boolean logic
 
 lemma BooleanLogic()
 {

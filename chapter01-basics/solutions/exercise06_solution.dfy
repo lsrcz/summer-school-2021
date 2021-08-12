@@ -1,4 +1,4 @@
-// More sets
+//#title More set tools
 
 // <= on sets is subset.
 predicate HasFourFiveSix(a:set<int>)

@@ -1,4 +1,5 @@
-// Dining Philosophers
+//#title Dining Philosophers
+//#desc A more challenging state machine: define the state datatype.
 
 //#elide 
 //#elide 

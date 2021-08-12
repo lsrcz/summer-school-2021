@@ -1,3 +1,6 @@
+//#title IsPrime
+//#desc Basic specification
+
 //#start-elide
 predicate divides(f:nat, i:nat)
   requires 1<=f

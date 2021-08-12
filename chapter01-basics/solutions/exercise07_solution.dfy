@@ -1,4 +1,4 @@
-// Sequences
+//#title Sequences
 
 lemma ExperimentsWithSequences()
 {

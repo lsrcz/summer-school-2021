@@ -1,4 +1,4 @@
-// Algebraic datatypes in their full glory. The include statement.
+//#title Algebraic datatypes in their full glory.
 
 // A struct is a product:
 // There are 3 HAlign instances, and 3 VAlign instances;

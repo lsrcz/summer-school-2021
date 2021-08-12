@@ -1,4 +1,5 @@
-// Hoare logic
+//#title IsEven
+//#desc Hoare logic
 
 // So far, we have introduced function and datatype definitions;
 // the definition of each is entirely visible to its users.

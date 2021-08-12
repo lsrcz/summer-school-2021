@@ -1,4 +1,4 @@
-// Sets
+//#title Sets
 
 // This predicate takes a set of integers as an argument.
 // set<T> is a built-in templated type.

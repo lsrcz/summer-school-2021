@@ -1,5 +1,6 @@
-// Coke Machine
-//#elide This is the first state machine specification example.
+//#title Coke Machine
+//#desc The first state machine specification exercise: fill in actions.
+//#elide
 //#elide Its complexity is about the same as the library. We 
 //#elide provide the boilerplate for everything, but leave the state
 //#elide transitions as an exercise.

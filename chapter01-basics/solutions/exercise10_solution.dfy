@@ -1,4 +1,4 @@
-// include directive. Union (sum) datatypes
+//#title include directive and Union (sum) datatypes
 
 // You can include code from another file. includes must all appear at the
 // beginning of a file, before any other definitions.
