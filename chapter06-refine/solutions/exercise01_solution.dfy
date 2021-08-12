@@ -62,6 +62,11 @@ module Types {
   }
 }
 
+// This module defines a Map state machine that serves as the system specification.
+// You can tell by looking at this state machine that Key-Value pairs that get inserted
+// are returned in Queries until otherwise inserted. It only talks about the semantics
+// of Insert and Query; all of the details of a sharded implementation are left to
+// the implementation.
 module MapSpec {
   import opened Types
 
@@ -70,18 +75,25 @@ module MapSpec {
   predicate Init(v: Variables)
   {
     v.mapp == InitialMap()
+    // Initially, every key maps to DefaultValue.
   }
 
   predicate InsertOp(v:Variables, v':Variables, key:Key, value:Value)
   {
+    // A well-formed condition: we're not even gonna talk about keys other than AllKeys().
     && key in AllKeys()
+    // Replace key with value. v.mapp domain remains AllKeys().
     && v'.mapp == v.mapp[key := value]
   }
 
   predicate QueryOp(v:Variables, v':Variables, key:Key, output:Value)
   {
     && key in AllKeys()
-    && key in v.mapp  // this is always true, because this spec inductively maintains v.mapp.Keys == AllKeys()
+    // This is always true, but only visible by an inductive proof. We assume
+    // it here so we can dereference v.mapp[key] on the next line. (If my claim
+    // were wrong, then some Querys would be rejected by this test, which is a
+    // liveness failure but not a safety failure.)
+    && key in v.mapp
     && output == v.mapp[key]
     && v' == v  // no change to map state
   }
