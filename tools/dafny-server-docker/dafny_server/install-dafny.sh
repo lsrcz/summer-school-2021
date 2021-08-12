@@ -10,7 +10,9 @@ set -x
 mkdir .dafny
 cd .dafny
 
-git clone https://github.com/secure-foundations/dafny.git
+#git clone https://github.com/secure-foundations/dafny.git
+# actually let's use official dafny:
+git clone https://github.com/dafny-lang/dafny.git
 cd dafny
 make exe
 cd ..

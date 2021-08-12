@@ -30,11 +30,8 @@ newgrp docker
 If everything is working, you should see:
 
 ```bash
-Dafny 2.3.0.10506
-test.dfy(6,0): Error BP5003: A postcondition might not hold on this return path.
-
-test.dfy(5,12): Related location: This is the postcondition that might not hold.
-
+/home/dafnyserver/test.dfy(6,0): Error: A postcondition might not hold on this return path.
+/home/dafnyserver/test.dfy(5,12): Related location: This is the postcondition that might not hold.
 Execution trace:
     (0,0): anon0
 
