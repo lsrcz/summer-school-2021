@@ -11,9 +11,9 @@ import sys
 
 script_dir = os.path.dirname(__file__)
 instructor_dir = os.path.relpath(os.path.join(script_dir, ".."))
-print(f"instructor_dir  {instructor_dir}")
+#print(f"instructor_dir  {instructor_dir}")
 student_dir = os.path.relpath(os.path.join(instructor_dir, "../summer-school-2021/"))
-print(f"student_dir  {student_dir}")
+#print(f"student_dir  {student_dir}")
 
 def mkdirs(dstpath):
   """Make directories to include file dstpath, if necessary"""
@@ -90,13 +90,13 @@ class Element:
         output_lines.append(output_line)
     mkdirs(self.exercise_path())
     open(self.exercise_path(), "w").write(''.join([line+"\n" for line in output_lines]))
-    print(f"Generated {self.exercise_path()}")
+    #print(f"Generated {self.exercise_path()}")
 
   def compile(self):
-    print(f"-- {self.type}/{self.filename}")
+    #print(f"-- {self.type}/{self.filename}")
     if self.type == "solutions":
       # solutions map into exercises dir
-      print(f"Transform {self.num}")
+      #print(f"Transform {self.num}")
       self.transform_solution()
     else:
       # everything else goes in the same relative dir
@@ -191,7 +191,10 @@ def main():
   action = sys.argv[1] if len(sys.argv)==2 else "compile"
   if action=="compile":
     Catalog().compile_elements()
-  else:
+  elif action=="test":
     Catalog().test_elements()
+  else:
+    print("Invalid verb.")
+    sys.exit(-1)
 
 main()
