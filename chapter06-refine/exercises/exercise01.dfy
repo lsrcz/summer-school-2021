@@ -1,26 +1,61 @@
+//#title Synchronous KV Store
+//#desc Build a refinement from a protocol (distributed sharded state) to
+//#desc a specification (a logically-centralized abstract map).
+
+// "Synchronous" means network messages are delivered instantaneously -- we
+// keep the challenge simpler here by pretending messages can be sent and
+// delivered atomically.
+
+
 include "../../library/library.dfy"
 
 module Types {
-  // TODO finite domain of keys so we can use finite-domained maps and avoid manager nonsense
+  // Rather than concretely explain the Key and Value types, we define the spec
+  // and protocol over some uninterpreted types. The type declaration below says "there
+  // is some type Key, but this protocol's behavior doesn't depend on what actual
+  // type it is."
+
+  // We need to tell Dafny two things about the type to convince it the type behaves
+  // mathematically:
+  // (==) means whatever this type is, it has equality defined on it.
+  // !new means this type can't be allocated on the heap; it's a mathematical
+  // immutable object.
+  // Since we're in math-land, not implementation-land, we always want both features
+  // of all types, so we declare them on these otherwise-unspecified types.
+  // Missing == gives "map domain type must support equality" errors.
+  // Missing !new gives "...not allowed to depend on the set of allocated
+  // references" errors.
   type Key(==, !new)
 
-  // Assume a finite domain (set is finite) of possible keys, so we
-  // can use (finite) maps. Dafny also offers infinite maps, but those
-  // bring another twist, so let's just use what's familiar for now.
+  // Dafny's map<> type requires a finite domain. It also has an imap<> type that
+  // allows an infinite domain, but we'd like to defer that complexity, so we'll stick
+  // with finite maps.
+  // Looking forward to the implementation, we can start with no keys stored, but we
+  // are going to need to store "shard authority" information (which host is responsible
+  // for each key) for every possible key, so eventually we're going to need to
+  // have maps that contain every possible key. If we want to avoid imap<> for now,
+  // then we'll need a finite keyspace. `type Key` is uninterpreted, and there's
+  // no easy way to declare that it's finite.
+  // (Side note: actually there is; Dafny has a predicate type constructor, but it's
+  // flaky and sometimes crashes Dafny, so we're going to steer clear of it, too.)
+
+  // So, just as we assume there's some space of Keys, let's assume a function that
+  // defines a finite subset of those keys as the keyspace we're actually going to use.
+  // We leave the function body absent, which means it's an axiom: we don't provide
+  // the function, but assume such a function exists.
+  // Everywhere we use a Key, we'll also require it to be in AllKeys().
   function AllKeys() : set<Key>
 
   type Value(==, !new)
-    // (==) means whatever this type is, it has equality defined on it.
-    // !new means this type can't be allocated on the heap; it's a mathematical
-    // immutable object.
-    // Since we're in math-land, not implementation-land, we always want both features
-    // of all types, so we declare them on these otherwise-unspecified types.
-    // Missing == gives "map domain type must support equality" errors.
-    // Missing !new gives "...not allowed to depend on the set of allocated references" errors.
 
+  // To keep the API simple, we omit the concept of "the absence of a key", and instead
+  // define a DefaultValue that keys have until Inserted otherwise.
   function DefaultValue() : Value
-    // No body -> this is an axiom.
+    // Again, No body -> this is an axiom.
 
+  // This map comprehension assigns the DefaultValue to every key in the finite AllKeys()
+  // keyspace. (Note that here the finite-ness of AllKeys() is now essential, as
+  // it shows Dafny than the map has finite domain.)
   function InitialMap() : map<Key, Value>
   {
     map key | key in AllKeys() :: DefaultValue()
@@ -46,7 +81,8 @@ module MapSpec {
   predicate QueryOp(v:Variables, v':Variables, key:Key, output:Value)
   {
     && key in AllKeys()
-    && (output == if key in v.mapp then v.mapp[key] else DefaultValue())
+    && key in v.mapp  // this is always true, because this spec inductively maintains v.mapp.Keys == AllKeys()
+    && output == v.mapp[key]
     && v' == v  // no change to map state
   }
 
@@ -68,9 +104,6 @@ module MapSpec {
     exists step :: NextStep(v, v', step)
   }
 }
-
-// A "synchronous" KV store (network messages are delivered
-// instantaneously).
 
 module Implementation {
   import opened Types
