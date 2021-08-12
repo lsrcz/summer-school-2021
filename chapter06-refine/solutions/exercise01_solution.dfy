@@ -1,8 +1,36 @@
+//#title Synchronous KV Store
+//#desc Build a refinement from a protocol (distributed sharded state) to
+//#desc a specification (a logically-centralized abstract map).
+
+// "Synchronous" means network messages are delivered instantaneously -- we
+// keep the challenge simpler here by pretending messages can be sent and
+// delivered atomically.
+
+
 include "../../library/library.dfy"
 
 module Types {
-  // TODO finite domain of keys so we can use finite-domained maps and avoid manager nonsense
+  // Rather than concretely explain the Key and Value types, we define the spec
+  // and protocol over some uninterpreted types. The type declaration below says "there
+  // is some type Key, but this protocol's behavior doesn't depend on what actual
+  // type it is."
+
+  // We need to tell Dafny two things about the type to convince it the type behaves
+  // mathematically:
+  // (==) means whatever this type is, it has equality defined on it.
+  // !new means this type can't be allocated on the heap; it's a mathematical
+  // immutable object.
+  // Since we're in math-land, not implementation-land, we always want both features
+  // of all types, so we declare them on these otherwise-unspecified types.
+  // Missing == gives "map domain type must support equality" errors.
+  // Missing !new gives "...not allowed to depend on the set of allocated
+  // references" errors.
   type Key(==, !new)
+
+
+  // We'd like to use Dafny's map<> type, which requires a finite domain.
+  // Unfortunately, there's no way to say "there are only finitely many Keys".
+  // So instead we assume there's a (finite-sized) set of Key objects that
 
   // Assume a finite domain (set is finite) of possible keys, so we
   // can use (finite) maps. Dafny also offers infinite maps, but those
@@ -10,13 +38,6 @@ module Types {
   function AllKeys() : set<Key>
 
   type Value(==, !new)
-    // (==) means whatever this type is, it has equality defined on it.
-    // !new means this type can't be allocated on the heap; it's a mathematical
-    // immutable object.
-    // Since we're in math-land, not implementation-land, we always want both features
-    // of all types, so we declare them on these otherwise-unspecified types.
-    // Missing == gives "map domain type must support equality" errors.
-    // Missing !new gives "...not allowed to depend on the set of allocated references" errors.
 
   function DefaultValue() : Value
     // No body -> this is an axiom.
@@ -46,7 +67,8 @@ module MapSpec {
   predicate QueryOp(v:Variables, v':Variables, key:Key, output:Value)
   {
     && key in AllKeys()
-    && (output == if key in v.mapp then v.mapp[key] else DefaultValue())
+    && key in v.mapp  // this is always true, because this spec inductively maintains v.mapp.Keys == AllKeys()
+    && output == v.mapp[key]
     && v' == v  // no change to map state
   }
 
@@ -68,9 +90,6 @@ module MapSpec {
     exists step :: NextStep(v, v', step)
   }
 }
-
-// A "synchronous" KV store (network messages are delivered
-// instantaneously).
 
 module Implementation {
   import opened Types

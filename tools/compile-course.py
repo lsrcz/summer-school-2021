@@ -118,7 +118,7 @@ class Element:
             for l in input_lines if l.startswith("//#desc")])
 
   def md_catalog_row(self):
-    if not(self.title or self.description):
+    if not(self.exercise_rel_path) or "elide" in self.exercise_rel_path:
       return ""
     row = f"- [`{self.exercise_rel_path}`]({self.exercise_rel_path})"
     if self.title:
