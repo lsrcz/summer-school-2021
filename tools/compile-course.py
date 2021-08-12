@@ -37,10 +37,10 @@ class Element:
       mo = re.compile("exercise(\d+)_solution.dfy").search(filename)
       if mo:
         self.num = mo.groups()[0]
-      self.exercise_path = os.path.join(student_dir, self.chapter, "exercises",
+      self.exercise_rel_path = os.path.join(self.chapter, "exercises",
         f"exercise{self.num}.dfy" if self.num else self.filename)
     else:
-      self.exercise_path = None
+      self.exercise_rel_path = None
 
   def is_dafny_source(self):
     return self.num != None
@@ -59,6 +59,9 @@ class Element:
 
   def student_path(self):
     return os.path.join(student_dir, self.chapter, self.type, self.filename)
+
+  def exercise_path(self):
+    return os.path.join(student_dir, self.exercise_rel_path)
 
   def transform_solution(self):
     if "elide" in self.filename:
@@ -85,9 +88,9 @@ class Element:
         output_line = None
       if output_line!=None:
         output_lines.append(output_line)
-    mkdirs(self.exercise_path)
-    open(self.exercise_path, "w").write(''.join([line+"\n" for line in output_lines]))
-    print(f"Generated {self.exercise_path}")
+    mkdirs(self.exercise_path())
+    open(self.exercise_path(), "w").write(''.join([line+"\n" for line in output_lines]))
+    print(f"Generated {self.exercise_path()}")
 
   def compile(self):
     print(f"-- {self.type}/{self.filename}")
@@ -117,8 +120,7 @@ class Element:
   def md_catalog_row(self):
     if not(self.title or self.description):
       return ""
-    path = f"{self.chapter}/{self.type}/{self.filename}"
-    row = f"- [`{path}`]({path})"
+    row = f"- [`{self.exercise_rel_path}`]({self.exercise_rel_path})"
     if self.title:
       row += f"<br>**{self.title}**"
     if self.description:
@@ -138,23 +140,19 @@ class Catalog:
       self.elements[element.chapter][element.type].add(element)
 
   def foreach_element(self, fun):
-    dbg_count = 0
+    for chapter in sorted(self.elements.keys()):
+      for type in sorted(self.elements[chapter].keys()):
+        for element in sorted(self.elements[chapter][type]):
+          fun(element)
+
+  def clean_output(self):
+    # Destroy existing data
     for chapter in sorted(self.elements.keys()):
       output_chapter = os.path.join(student_dir, chapter)
-
-      # Destroy existing data
-      #print(output_chapter)
       try:
         shutil.rmtree(output_chapter)
       except FileNotFoundError: pass
       os.mkdir(output_chapter)
-
-      for type in sorted(self.elements[chapter].keys()):
-        #print(f"# chapter {chapter} type {type}")
-        for element in sorted(self.elements[chapter][type]):
-          dbg_count += 1
-          #if dbg_count>12: return
-          fun(element)
 
   def get_elements(self):
     element_list = []
@@ -162,6 +160,7 @@ class Catalog:
     return element_list
 
   def compile_elements(self):
+    self.clean_output()
     self.foreach_element(lambda elt: elt.compile())
 
     catalog_filename = os.path.join(student_dir, "exercises.md")
