@@ -81,4 +81,6 @@ The `chapter` directories contain:
 
 * `solution/`: If you get really stuck, look for solutions here. Again, spoiler warning.
 
+* [exercises.md](exercises.md) is an index of the exercises.
+
 Files in a directory are numbered to indicate the order they're meant to be read.  There is no chapter01/exercise17.dfy because there is a chapter01/demo17.
