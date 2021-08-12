@@ -1,4 +1,4 @@
-// Predicates
+//#title Predicates
 
 // A common thing you'll want is a function with a boolean result.
 function AtLeastTwiceAsBigFunction(a:int, b:int) : bool

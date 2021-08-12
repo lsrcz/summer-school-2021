@@ -1,4 +1,4 @@
-// Quantifiers
+//#title Quantifiers
 include "lib_directions.dfy"
 include "lib_lunch.dfy"
 

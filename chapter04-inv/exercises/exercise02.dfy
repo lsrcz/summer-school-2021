@@ -1,3 +1,12 @@
+//#title Single-Server Lock Service Proof
+//#desc A more realistic invariant proof of the previous chapter's lock
+//#desc service.
+
+// We provide a correct spec for the lock server here, but leave you
+// to define the Safety property to be proven.
+// You are welcome to prove correct your own specification from chapter03,
+// but note that may be too hard or too easy if your spec is broken.
+
 datatype ServerGrant = Unlocked | Client(id: nat)
 
 datatype ClientRecord = Released | Acquired

@@ -1,4 +1,5 @@
-// Coke Machine
+//#title Coke Machine
+//#desc The first state machine specification exercise: fill in actions.
 
 // You are asked to define the state machine for a coke vending machine.
 // The machine starts empty and has a maximum capacity of 7 cokes.

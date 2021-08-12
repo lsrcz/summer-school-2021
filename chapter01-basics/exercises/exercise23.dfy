@@ -1,3 +1,7 @@
+//#title Binary Tree Search
+//#desc Implement search in a binary tree and prove it works.
+//#desc Practice with proof diagnosis.
+
 include "exercise22.dfy"
 
 // This exercise builds on exercise22 (so make sure you have completed

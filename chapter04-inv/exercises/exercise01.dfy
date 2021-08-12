@@ -1,3 +1,7 @@
+//#title Crawler
+//#desc Introduction to inductive invariants
+//#desc -- implement the visualization from the lecture.
+
 module Crawler {
   //datatype Constants = Constants()
   datatype Variables = Variables(x:int, y:int)

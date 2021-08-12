@@ -1,3 +1,7 @@
+//#title Binary Tree Is Sorted
+//#desc Prove an implementation meets its spec.
+//#desc Practice with proof diagnosis.
+
 // Define a Binary Tree and write a method to check if it is sorted
 
 // A binary tree is a tree data structure in which each node has a value and at

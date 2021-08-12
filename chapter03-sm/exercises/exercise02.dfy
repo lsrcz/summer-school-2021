@@ -1,4 +1,5 @@
-// Dining Philosophers
+//#title Dining Philosophers
+//#desc A more challenging state machine: define the state datatype.
 
 // Define the state machine for the Dining Philosophers.
 // There are N philosophers sitting around a round table.

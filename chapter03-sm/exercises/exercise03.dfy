@@ -1,4 +1,6 @@
-// Single-Server Lock Service
+//#title Single-Server Lock Service Spec
+//#desc A complex state machine
+//#desc including a Safety predicate on the state type.
 
 /*
 Model a lock service that consists of a single server and an

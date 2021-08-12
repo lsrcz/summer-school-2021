@@ -1,4 +1,4 @@
-// Comprehensions, the finite heuristic, axioms, recursion
+//#title Comprehensions, the finite heuristic, axioms, recursion
 
 predicate IsEven(x:int)
 {

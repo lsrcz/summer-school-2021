@@ -1,4 +1,4 @@
-// Struct (product) datatypes.
+//#title Struct (product) datatypes.
 
 // Okay, but I know you won't settle for merely renaming some fancy type
 // expression.  You actually want to define something new.

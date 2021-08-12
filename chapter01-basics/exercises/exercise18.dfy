@@ -1,4 +1,5 @@
-// Recursion challenge.
+//#title Fibo
+//#desc Recursion challenge.
 
 function method fibo(i:nat) : nat
 {

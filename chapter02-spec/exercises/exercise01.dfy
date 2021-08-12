@@ -1,3 +1,6 @@
+//#title IsPrime
+//#desc Basic specification
+
 predicate IsPrime(i:nat)
 {
 }
