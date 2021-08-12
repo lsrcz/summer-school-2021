@@ -56,7 +56,7 @@
 
 - [`chapter03-sm/exercises/exercise02.dfy`](chapter03-sm/exercises/exercise02.dfy)<br>**Dining Philosophers** -- A more challenging state machine: define the state datatype.
 
-- [`chapter03-sm/exercises/exercise03.dfy`](chapter03-sm/exercises/exercise03.dfy)<br>**Single-Server Lock Service Spec** -- A complex state machine including a Safety predicate on the state type.
+- [`chapter03-sm/exercises/exercise03.dfy`](chapter03-sm/exercises/exercise03.dfy)<br>**Single-Server Lock Service Model** -- A complex state machine including a Safety predicate on the state type.
 
 ## chapter04-inv
 
