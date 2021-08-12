@@ -46,9 +46,9 @@
 
 - [`chapter01-basics/exercises/exercise23.dfy`](chapter01-basics/exercises/exercise23.dfy)<br>**Binary Tree Search** -- Implement search in a binary tree and prove it works. Practice with proof diagnosis.
 
-- [`chapter01-basics/exercises/lib_directions.dfy`](chapter01-basics/exercises/lib_directions.dfy)<br>**Library for exercises 10 & 13**
+- [`chapter01-basics/exercises/lib_directions.dfy`](chapter01-basics/exercises/lib_directions.dfy) -- Library for exercises 10 & 13
 
-- [`chapter01-basics/exercises/lib_lunch.dfy`](chapter01-basics/exercises/lib_lunch.dfy)<br>**Library for exercises 12 & 13**
+- [`chapter01-basics/exercises/lib_lunch.dfy`](chapter01-basics/exercises/lib_lunch.dfy) -- Library for exercises 12 & 13
 
 ## chapter02-spec
 
