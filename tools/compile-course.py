@@ -6,6 +6,8 @@ import os
 import re
 import shutil
 import operator
+import subprocess
+import sys
 
 script_dir = os.path.dirname(__file__)
 instructor_dir = os.path.relpath(os.path.join(script_dir, ".."))
@@ -30,16 +32,24 @@ class Element:
     self.type = type
     self.filename = filename
 
+    self.num = None
     if type=="solutions":
       mo = re.compile("exercise(\d+)_solution.dfy").search(filename)
-      self.num = mo.groups()[0] if mo else None
+      if mo:
+        self.num = mo.groups()[0]
       self.exercise_path = os.path.join(student_dir, self.chapter, "exercises",
         f"exercise{self.num}.dfy" if self.num else self.filename)
     else:
       self.exercise_path = None
 
+  def is_dafny_source(self):
+    return self.num != None
+
   def key(self):
     return (self.chapter, self.type, self.filename)
+
+  def __repr__(self):
+    return self.instructor_path()
 
   def __lt__(self, other):
     return operator.lt(self.key(), other.key())
@@ -79,7 +89,7 @@ class Element:
     open(self.exercise_path, "w").write(''.join([line+"\n" for line in output_lines]))
     print(f"Generated {self.exercise_path}")
 
-  def process(self):
+  def compile(self):
     print(f"-- {self.type}/{self.filename}")
     if self.type == "solutions":
       # solutions map into exercises dir
@@ -89,30 +99,63 @@ class Element:
       # everything else goes in the same relative dir
       mkdir_and_copy(self.instructor_path(), self.student_path())
 
+  def test(self):
+    if self.is_dafny_source():
+      cmd = ["dafny", "/compile:0", "/vcsCores:6", self.instructor_path()]
+      print(f"  -- {' '.join(cmd)}")
+      return subprocess.call(cmd)==0
 
-def gather_elements():
-  elements = collections.defaultdict(lambda: collections.defaultdict(set))
-  for path in glob.glob(instructor_dir+"/chapter*/*/*"):
-    postfix = path[len(instructor_dir)+1:]
-    element = Element(*postfix.split("/"))
-    elements[element.chapter][element.type].add(element)
-  return elements
+class Catalog:
+  def __init__(self):
+    self.gather_elements()
 
-def process_elements():
-  elements = gather_elements()
-  for chapter in sorted(elements.keys()):
-    output_chapter = os.path.join(student_dir, chapter)
+  def gather_elements(self):
+    self.elements = collections.defaultdict(lambda: collections.defaultdict(set))
+    for path in glob.glob(instructor_dir+"/chapter*/*/*"):
+      postfix = path[len(instructor_dir)+1:]
+      element = Element(*postfix.split("/"))
+      self.elements[element.chapter][element.type].add(element)
 
-    # Destroy existing data
-    #print(output_chapter)
-    try:
-      shutil.rmtree(output_chapter)
-    except FileNotFoundError: pass
-    os.mkdir(output_chapter)
+  def foreach_element(self, fun):
+    dbg_count = 0
+    for chapter in sorted(self.elements.keys()):
+      output_chapter = os.path.join(student_dir, chapter)
 
-    for type in sorted(elements[chapter].keys()):
-      print(f"# chapter {chapter} type {type}")
-      for element in sorted(elements[chapter][type]):
-        element.process()
+      # Destroy existing data
+      #print(output_chapter)
+      try:
+        shutil.rmtree(output_chapter)
+      except FileNotFoundError: pass
+      os.mkdir(output_chapter)
 
-process_elements()
+      for type in sorted(self.elements[chapter].keys()):
+        print(f"# chapter {chapter} type {type}")
+        for element in sorted(self.elements[chapter][type]):
+          dbg_count += 1
+          #if dbg_count>12: return
+          fun(element)
+
+  def compile_elements(self):
+    self.foreach_element(lambda elt: elt.compile())
+
+  def test_elements(self):
+    results = []
+    self.foreach_element(lambda elt: results.append((elt, elt.test())))
+    failures = []
+    for (elt, result) in results:
+      if result==False:
+        failures.append(elt)
+    if len(failures)==0:
+      print("All tests passed")
+    else:
+      print(f"Failing tests count: {len(failures)}")
+      print(failures)
+
+def main():
+  action = sys.argv[1] if len(sys.argv)==2 else "compile"
+  if action=="compile":
+    Catalog().compile_elements()
+  else:
+    Catalog().test_elements()
+
+main()
