@@ -1,5 +1,5 @@
 //#title Two Phase Commit Safety Proof
-//#desc Model a distributed protocol using compound state machines.
+//#desc Prove that the 2PC distributed system (exercise01) accomplishes the Safety spec (exercise02)
 
 // TODO(manos): how should we ensure this file is disseminated at the
 // appropriate time, so students aren't waiting for it?

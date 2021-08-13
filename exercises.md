@@ -78,7 +78,7 @@
 
 - [`chapter05-dsm/exercises/exercise02.dfy`](chapter05-dsm/exercises/exercise02.dfy)<br>**Two Phase Commit Safety Specification Predicate** -- Express the English Atomic Commit safety properties as predicates over the compound state machine model from exercise01.
 
-- [`chapter05-dsm/exercises/exercise03.dfy`](chapter05-dsm/exercises/exercise03.dfy)<br>**Two Phase Commit Safety Proof** -- Model a distributed protocol using compound state machines.
+- [`chapter05-dsm/exercises/exercise03.dfy`](chapter05-dsm/exercises/exercise03.dfy)<br>**Two Phase Commit Safety Proof** -- Prove that the 2PC distributed system (exercise01) accomplishes the Safety spec (exercise02)
 
 ## chapter06-refine
 
