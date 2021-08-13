@@ -102,8 +102,6 @@ class Element:
       # everything else goes in the same relative dir
       mkdir_and_copy(self.instructor_path(), self.student_path())
 
-    self.extract_docs()
-
   def test(self):
     if self.is_dafny_source():
       cmd = ["dafny", "/compile:0", "/vcsCores:6", self.instructor_path()]
@@ -135,8 +133,8 @@ class Catalog:
   def gather_elements(self):
     self.elements = collections.defaultdict(lambda: collections.defaultdict(set))
     for path in glob.glob(instructor_dir+"/chapter*/*/*"):
-      postfix = path[len(instructor_dir)+1:]
-      element = Element(*postfix.split("/"))
+      suffix = path[len(instructor_dir)+1:]
+      element = Element(*suffix.split("/"))
       self.elements[element.chapter][element.type].add(element)
 
   def foreach_element(self, fun):
@@ -163,9 +161,11 @@ class Catalog:
     self.clean_output()
     self.foreach_element(lambda elt: elt.compile())
 
-    catalog_filename = os.path.join(student_dir, "exercises.md")
+  def build_catalog(self):
+    self.foreach_element(lambda elt: elt.extract_docs())
 
     chapter = None
+    catalog_filename = os.path.join(student_dir, "exercises.md")
     with open(catalog_filename, "w") as fp:
       fp.write("# Index of exercises\n\n")
       for element in self.get_elements():
@@ -187,10 +187,18 @@ class Catalog:
       print(f"Failing tests count: {len(failures)}")
       print(failures)
 
+  def copy_library(self):
+    for in_path in glob.glob(instructor_dir+"/library/*"):
+      suffix = in_path[len(instructor_dir)+1:]
+      out_path = os.path.join(student_dir, suffix)
+      shutil.copyfile(in_path, out_path)
+
 def main():
   action = sys.argv[1] if len(sys.argv)==2 else "compile"
   if action=="compile":
     Catalog().compile_elements()
+    Catalog().build_catalog()
+    Catalog().copy_library()
   elif action=="test":
     Catalog().test_elements()
   else:
