@@ -15,6 +15,10 @@
  * 4. Participants receiving Commit set decision_i := Commit
  *   (The slide is delightfully poorly specified. "else decision_i := Abort"!?
  *   When else? As soon as it doesn't hear Commit!?)
+ *
+ * This file provides a lot of helpful framework. You only need to
+ * define Types.Message and then fill in the state machine types and actions
+ * in module CoordinatorHost and module ParticipantHost.
  */
 
 include "../../library/Library.dfy" // Some handy utilities.
@@ -56,9 +60,23 @@ module CoordinatorHost {
   import opened Library
 
 //#exercise  datatype Constants = Constants()
-//#exercise  datatype Variables = Variables()
 //#start-elide
   datatype Constants = Constants(participantCount: nat)
+//#end-elide
+
+  // What relationship must hold between this host's own constants and the
+  // structure of the overall group of hosts? It needs to have a correct
+  // count of the number of participants.
+  predicate ConstantsValidForGroup(c: Constants, participantCount: nat)
+  {
+//#exercise    true // replace me
+//#start-elide
+    && c.participantCount == participantCount
+//#end-elide
+  }
+
+//#exercise  datatype Variables = Variables()
+//#start-elide
   datatype Variables = Variables(votes: seq<Option<Vote>>, decision: Option<Decision>)
 //#end-elide
   {
@@ -70,15 +88,6 @@ module CoordinatorHost {
       && |votes| == c.participantCount
 //#end-elide
     }
-  }
-
-  // All-hosts protocol setup will tell us how many participants are involved
-  predicate ConstantsValidForGroup(c: Constants, participantCount: nat)
-  {
-//#exercise    true // replace me
-//#start-elide
-    && c.participantCount == participantCount
-//#end-elide
   }
 
   predicate Init(c: Constants, v: Variables)
@@ -183,9 +192,22 @@ module ParticipantHost {
   import opened Library
 
 //#exercise  datatype Constants = Constants()
-//#exercise  datatype Variables = Variables()
 //#start-elide
   datatype Constants = Constants(hostId: HostId, preference: Vote)
+//#end-elide
+
+  // What relationship must hold between this host's own constants and the
+  // structure of the overall group of hosts? It needs to know its hostId.
+  predicate ConstantsValidForGroup(c: Constants, hostId: HostId)
+  {
+//#exercise    true // replace me
+//#start-elide
+    && c.hostId == hostId
+//#end-elide
+  }
+
+//#exercise  datatype Variables = Variables()
+//#start-elide
   datatype Variables = Variables(decision: Option<Decision>)
 //#end-elide
   {
@@ -197,14 +219,11 @@ module ParticipantHost {
     }
   }
 
-  predicate Init(c: Constants, v: Variables, hostId: HostId)
+  predicate Init(c: Constants, v: Variables)
   {
 //#exercise    true // replace me
 //#start-elide
     && v.decision.None?
-    // ProtocolHostsInit tells us what our own hostId is so we can
-    // set the return address on outgoing messages.
-    && c.hostId == hostId
 //#end-elide
   }
 
@@ -297,6 +316,11 @@ module Host {
     && (forall hostid:HostId | hostid < |grp_c|-1 :: grp_c[hostid].ParticipantConstants?)
     // The coordinator's constants must correctly account for the number of participants
     && CoordinatorHost.ConstantsValidForGroup(Last(grp_c).coordinator, |grp_c|-1)
+    // The participants's constants must match their group positions.
+    // (Actually, they just need to be distinct from one another so we get
+    // non-conflicting votes, but this is an easy way to express that property.)
+    && (forall hostid:HostId | hostid < |grp_c|-1
+        :: ParticipantHost.ConstantsValidForGroup(grp_c[hostid].participant, hostid))
   }
 
   predicate GroupWF(grp_c: seq<Constants>, grp_v: seq<Variables>)
@@ -321,7 +345,7 @@ module Host {
     && CoordinatorHost.Init(Last(grp_c).coordinator, Last(grp_v).coordinator)
     // Participants initted with their ids.
     && (forall hostid:HostId | hostid < |grp_c|-1 ::
-        ParticipantHost.Init(grp_c[hostid].participant, grp_v[hostid].participant, hostid)
+        ParticipantHost.Init(grp_c[hostid].participant, grp_v[hostid].participant)
       )
   }
 
