@@ -46,4 +46,17 @@ module Library {
   }
 
   datatype Option<T> = Some(value:T) | None
+
+  function {:opaque} MapRemoveOne<K,V>(m:map<K,V>, key:K) : (m':map<K,V>)
+    ensures forall k :: k in m && k != key ==> k in m'
+    ensures forall k :: k in m' ==> k in m && k != key
+    ensures forall j :: j in m' ==> m'[j] == m[j]
+    ensures |m'.Keys| <= |m.Keys|
+    ensures |m'| <= |m|
+  {
+    var m':= map j | j in m && j != key :: m[j];
+    assert m'.Keys == m.Keys - {key};
+    m'
+  }
+
 }
