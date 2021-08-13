@@ -63,6 +63,23 @@ class Element:
   def exercise_path(self):
     return os.path.join(student_dir, self.exercise_rel_path)
 
+  def inline(self, line):
+    mo = re.compile('\S+\s+"(\S+)"').search(line)
+    assert mo
+    inlinefile = mo.groups()[0]
+    inlinepath = os.path.join(instructor_dir, self.chapter, self.type, inlinefile)
+    lines = [line.rstrip() for line in open(inlinepath).readlines()]
+    output_lines = []
+    for line in lines:
+      if line.startswith("include") and not "library" in line:
+            # what a hackaroo
+        output_lines += self.inline(line)
+      elif line.startswith("//#"):
+        pass
+      else:
+        output_lines.append(line)
+    return output_lines
+
   def transform_solution(self):
     if "elide" in self.filename:
       return
@@ -82,6 +99,10 @@ class Element:
         elide = True
         output_line = None
       elif input_line.startswith("//#end-elide"):
+        elide = False
+        output_line = None
+      elif input_line.startswith("//#inline"):
+        output_lines += self.inline(input_line)
         elide = False
         output_line = None
       elif elide:
