@@ -32,7 +32,7 @@ module Obligations {
     requires Host.GroupWF(c.hosts, v.hosts)
   {
     // All hosts that reach a decision reach the same one
-    true
+    false // Replace me
   }
 
   // AC2 is sort of a history predicate; we're going to ignore it.
@@ -41,14 +41,14 @@ module Obligations {
   predicate SafetyAC3(c: Constants, v: Variables)
     requires Host.GroupWF(c.hosts, v.hosts)
   {
-    true
+    false // Replace me
   }
 
   // AC-4: If all processes prefer Yes, then the decision must be Commit.
   predicate SafetyAC4(c: Constants, v: Variables)
     requires Host.GroupWF(c.hosts, v.hosts)
   {
-    true
+    false // Replace me
   }
 
   // AC5 is a liveness proprety, we're definitely going to ignore it.

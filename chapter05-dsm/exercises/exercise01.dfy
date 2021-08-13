@@ -56,6 +56,7 @@ module CoordinatorHost {
     // WF is for a simple condition that relates every valid Variables state
     // to the Constants.
     predicate WF(c: Constants) {
+    true
     }
   }
 
@@ -86,7 +87,7 @@ module CoordinatorHost {
   predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step, msgOps: MessageOps)
   {
     match step
-    ReplaceMeWithYourJayNFSteps => true
+    case ReplaceMeWithYourJayNFSteps => true
   }
 
   predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
@@ -101,6 +102,11 @@ module ParticipantHost {
 
   datatype Constants = Constants()
   datatype Variables = Variables()
+  {
+    predicate WF(c: Constants) {
+      true
+    }
+  }
 
   predicate Init(c: Constants, v: Variables, hostId: HostId)
   {
@@ -117,7 +123,7 @@ module ParticipantHost {
   predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step, msgOps: MessageOps)
   {
     match step
-    ReplaceMeWithYourJayNFSteps => true
+    case ReplaceMeWithYourJayNFSteps => true
   }
 
   predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
