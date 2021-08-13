@@ -1,6 +1,7 @@
 //#title Synchronous KV Store
 //#desc Build a refinement from a protocol (distributed sharded state) to
 //#desc a specification (a logically-centralized abstract map).
+//#desc TODO Conform to 2PC abstract proof obligation structure.
 
 // "Synchronous" means network messages are delivered instantaneously -- we
 // keep the challenge simpler here by pretending messages can be sent and
@@ -118,6 +119,7 @@ module MapSpec {
 }
 
 module Implementation {
+  import opened Library
   import opened Types
 
   type HostIdx = nat
@@ -155,18 +157,6 @@ module Implementation {
     && key in v.maps[idx] // the participating "host" needs to be authoritative on this key
     && output == v.maps[idx][key]
     && v' == v  // UNCHANGED
-  }
-
-  function {:opaque} MapRemoveOne<K,V>(m:map<K,V>, key:K) : (m':map<K,V>)
-    ensures forall k :: k in m && k != key ==> k in m'
-    ensures forall k :: k in m' ==> k in m && k != key
-    ensures forall j :: j in m' ==> m'[j] == m[j]
-    ensures |m'.Keys| <= |m.Keys|
-    ensures |m'| <= |m|
-  {
-    var m':= map j | j in m && j != key :: m[j];
-    assert m'.Keys == m.Keys - {key};
-    m'
   }
 
   // A possible enhancement exercise: transfer many key,value pairs in one step
@@ -275,7 +265,7 @@ module RefinementProof {
   function Abstraction(c: Constants, v: Variables) : MapSpec.Variables
     requires v.WF(c)
   {
-    MapSpec.Variables(map key | key in KnownKeys(c, v) :: AbstractionOneKey(c, v, key))
+    MapSpec.Variables(InitialMap())
   }
 
   // This does slow things down quite a bit.
@@ -290,51 +280,6 @@ module RefinementProof {
 
   predicate Inv(c: Constants, v: Variables)
   {
-    && v.WF(c)
-    // Every key lives somewhere.
-    && KnownKeys(c, v) == Types.AllKeys()
-    // No key lives in two places.
-    && KeysHeldUniquely(c, v)
-  }
-
-  lemma InitAllKeysEmpty(c: Constants, v: Variables, count: nat)
-    requires Init(c, v)
-    requires 0 < count <= c.mapCount
-    ensures KnownKeys(c, v) == AllKeys()
-  {
-    EachUnionMemberBelongsToASet(MapDomains(c, v));
-    SetsAreSubsetsOfUnion(MapDomains(c, v));
-    forall key | key in AllKeys() ensures key in KnownKeys(c, v) {
-      assert key in MapDomains(c,v)[0]; // trigger
-    }
-  }
-
-  lemma AllKeysMembership(c: Constants, v: Variables)
-    requires Inv(c, v)
-    ensures forall key ::
-      (key in KnownKeys(c, v) <==> exists hostidx:HostIdx :: hostidx<c.mapCount && key in v.maps[hostidx])
-  {
-    var count := c.mapCount;
-    forall key
-      | key in KnownKeys(c, v)
-      ensures exists hostidx:HostIdx :: hostidx<count && key in v.maps[hostidx]
-    {
-      EachUnionMemberBelongsToASet(MapDomains(c, v));
-      var idx :| 0<=idx<|MapDomains(c, v)| && key in MapDomains(c, v)[idx];
-      assert count == |MapDomains(c, v)|;
-      assert v.maps[idx].Keys == MapDomains(c,v)[idx];
-      assert idx<count && key in v.maps[idx]; // trigger
-    }
-    forall key
-      | exists hostidx:HostIdx :: hostidx<count && key in v.maps[hostidx]
-      ensures key in KnownKeys(c, v)
-    {
-      var hostidx:HostIdx :| hostidx<count && key in v.maps[hostidx];
-      SetsAreSubsetsOfUnion(MapDomains(c, v));
-      assert key in MapDomains(c, v)[hostidx];
-      assert MapDomains(c, v)[hostidx] <= KnownKeys(c, v);
-      assert key in KnownKeys(c, v);
-    }
   }
 
   lemma InitRefines(c: Constants, v: Variables)
@@ -343,144 +288,8 @@ module RefinementProof {
     ensures MapSpec.Init(Abstraction(c, v))
     ensures Inv(c, v)
   {
-    InitAllKeysEmpty(c, v, c.mapCount);
-    reveal_KeysHeldUniquely();
   }
 
-  lemma ThisIsTheHost(c: Constants, v: Variables, hostidx:HostIdx, key:Key)
-    requires v.WF(c)
-    requires KeysHeldUniquely(c, v)
-    requires HostHasKey(c, v, hostidx, key)
-    ensures TheHostWithKey(c, v, key) == hostidx
-  {
-    reveal_KeysHeldUniquely();
-  }
-
-  lemma InsertPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, insertHost: HostIdx, insertedKey: Key, value: Value)
-    requires Inv(c, v)
-    requires Next(c, v, v')
-    requires c.ValidHost(insertHost)
-    requires Insert(c, v, v', insertHost, insertedKey, value)
-    ensures Inv(c, v')
-    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
-  {
-    var abstractMap := Abstraction(c, v).mapp;
-    var abstractMap' := Abstraction(c, v').mapp;
-
-    assert insertedKey in AllKeys() by {
-      SetsAreSubsetsOfUnion(MapDomains(c, v));
-      assert MapDomains(c, v)[insertHost] == v.maps[insertHost].Keys; //trigger
-    }
-
-    assert KeysHeldUniquely(c, v') by { reveal_KeysHeldUniquely(); }
-
-    forall key
-      ensures key in abstractMap' <==> key in abstractMap || key == insertedKey // domain
-      ensures key in abstractMap' ==> (abstractMap'[key] == if key==insertedKey then value else abstractMap[key])  // value
-    {
-      if key == insertedKey {
-        SetsAreSubsetsOfUnion(MapDomains(c, v'));
-        assert MapDomains(c, v')[insertHost] <= KnownKeys(c, v'); // trigger
-        assert key in abstractMap'; // case goal
-      }
-      if key in abstractMap {
-        var idx := GetIndexForMember(MapDomains(c, v), key);
-        assert MapDomains(c, v')[idx] <= KnownKeys(c, v') by {
-          // The lemma below is a trigger-trap danger (causes timeouts), so I'm
-          // careful to only call it tucked way into this by clause.
-          SetsAreSubsetsOfUnion(MapDomains(c, v'));
-        }
-        assert key in abstractMap'; // case goal
-      }
-      if key in abstractMap' {
-        if key == insertedKey {
-          ThisIsTheHost(c, v', insertHost, key);
-          assert abstractMap'[key] == value;  // case goal
-        } else {
-          var keyIdx := GetIndexForMember(MapDomains(c, v'), key);
-          ThisIsTheHost(c, v', keyIdx, key);
-          ThisIsTheHost(c, v, keyIdx, key);
-          assert key in abstractMap by {
-            SetsAreSubsetsOfUnion(MapDomains(c, v));
-            assert MapDomains(c, v)[keyIdx] <= KnownKeys(c, v);  // trigger
-          }
-          assert abstractMap'[key] == abstractMap[key]; // case goal
-        }
-      }
-    }
-
-    assert KnownKeys(c, v') == Types.AllKeys() by {
-      assert abstractMap'.Keys == KnownKeys(c, v'); // trigger
-    }
-    assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.InsertOpStep(insertedKey, value)); // witness
-  }
-
-  lemma TransferPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, sendIdx: HostIdx, recvIdx: HostIdx, sentKey: Key, value: Value)
-    requires Inv(c, v)
-    requires Next(c, v, v')
-    requires c.ValidHost(sendIdx)
-    requires c.ValidHost(recvIdx)
-    requires Transfer(c, v, v', sendIdx, recvIdx, sentKey, value)
-    ensures Inv(c, v')
-    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
-  {
-    // domain preserved
-    forall key
-      ensures key in Abstraction(c, v).mapp <==> key in Abstraction(c, v').mapp
-    {
-      var idx;
-      if key in Abstraction(c, v).mapp {
-        SetsAreSubsetsOfUnion(MapDomains(c, v'));
-        if key==sentKey {
-          idx := recvIdx;
-        }
-        else {
-          idx := GetIndexForMember(MapDomains(c, v), key);
-        }
-        assert MapDomains(c, v')[idx] <= KnownKeys(c, v');  // trigger
-        assert key in Abstraction(c, v').mapp;  // case goal
-      }
-      if key in Abstraction(c, v').mapp {
-        SetsAreSubsetsOfUnion(MapDomains(c, v));
-        if key==sentKey {
-          idx := sendIdx;
-        }
-        else {
-          idx := GetIndexForMember(MapDomains(c, v'), key);
-        }
-        assert MapDomains(c, v)[idx] <= KnownKeys(c, v);  // trigger
-        assert key in Abstraction(c, v).mapp;  // case goal
-      }
-    }
-
-    assert KeysHeldUniquely(c, v') by { reveal_KeysHeldUniquely(); }
-
-    // values preserved
-    forall key | key in Abstraction(c, v).mapp
-      ensures Abstraction(c, v).mapp[key] == Abstraction(c, v').mapp[key]
-    {
-      // identify where to find key in the old & new worlds
-      var idx, idx';
-      if key == sentKey {
-        idx := sendIdx;
-        idx' := recvIdx;
-      } else {
-        idx := GetIndexForMember(MapDomains(c, v), key);
-        idx' := idx;
-      }
-//      assert v'.maps[idx'][key] == v.maps[idx][key];  // hey look same values
-
-      // Tie from particular map up to abstraction
-      ThisIsTheHost(c, v', idx', key);
-      ThisIsTheHost(c, v, idx, key);
-    }
-
-    assert KnownKeys(c, v') == Types.AllKeys() by {
-      assert KnownKeys(c, v') == Abstraction(c, v').mapp.Keys;  // trigger
-      assert KnownKeys(c, v) == Abstraction(c, v).mapp.Keys;    // trigger
-    }
-    assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.NoOpStep); // witness
-  }
 
   lemma NextPreservesInvAndRefines(c: Constants, v: Variables, v': Variables)
     requires Inv(c, v)
@@ -488,23 +297,5 @@ module RefinementProof {
     ensures Inv(c, v')
     ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
   {
-    var step :| NextStep(c, v, v', step);
-    match step
-      case InsertStep(idx, key, value) => {
-        InsertPreservesInvAndRefines(c, v, v', idx, key, value);
-      }
-      case QueryStep(idx, key, output) => {
-        assert v == v'; // weirdly obvious trigger
-        assert Inv(c, v') by { reveal_KeysHeldUniquely(); }
-        assert key in KnownKeys(c, v) by { HostKeysSubsetOfKnownKeys(c, v, c.mapCount); }
-        assert output == Abstraction(c, v).mapp[key] by {
-          assert HostHasKey(c, v, idx, key);  // witness
-          reveal_KeysHeldUniquely();
-        }
-        assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.QueryOpStep(key, output)); // witness
-      }
-      case TransferStep(sendIdx, recvIdx, key, value) => {
-        TransferPreservesInvAndRefines(c, v, v', sendIdx, recvIdx, key, value);
-      }
   }
 }

@@ -1,3 +1,11 @@
+//#title
+//#desc TODO split into multiple steps:
+// 02 define the spec of atomic commit
+// 03 prove AC1,3,4 on spec
+// 04 then (given a correct spec) port forward the chapter5 implementation of 2PC to here
+// 05 then proving refinement
+//#desc TODO becomes exercise02-03-04
+
 /*
  * This file defines the specification of atomic commit in the form of a state
  * machine. Then we add proofs of three of the five properties by which AC is

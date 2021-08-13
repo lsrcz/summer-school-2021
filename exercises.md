@@ -74,13 +74,17 @@
 
 ## chapter05-dsm
 
-- [`chapter05-dsm/exercises/two-phase-commit.dfy`](chapter05-dsm/exercises/two-phase-commit.dfy)
+- [`chapter05-dsm/exercises/exercise01.dfy`](chapter05-dsm/exercises/exercise01.dfy)<br>**Two Phase Commit Model** -- Model a distributed protocol using compound state machines.
+
+- [`chapter05-dsm/exercises/exercise02.dfy`](chapter05-dsm/exercises/exercise02.dfy)<br>**Two Phase Commit Safety Specification Predicate** -- Express the English Atomic Commit safety properties as predicates over the compound state machine model from exercise01.
+
+- [`chapter05-dsm/exercises/exercise03.dfy`](chapter05-dsm/exercises/exercise03.dfy)<br>**Two Phase Commit Safety Proof** -- Model a distributed protocol using compound state machines.
 
 ## chapter06-refine
 
-- [`chapter06-refine/exercises/atomic-commit-spec.dfy`](chapter06-refine/exercises/atomic-commit-spec.dfy)
+- [`chapter06-refine/exercises/atomic-commit-spec.dfy`](chapter06-refine/exercises/atomic-commit-spec.dfy) -- TODO split into multiple steps: TODO becomes exercise02-03-04
 
-- [`chapter06-refine/exercises/exercise01.dfy`](chapter06-refine/exercises/exercise01.dfy)<br>**Synchronous KV Store** -- Build a refinement from a protocol (distributed sharded state) to a specification (a logically-centralized abstract map).
+- [`chapter06-refine/exercises/exercise01.dfy`](chapter06-refine/exercises/exercise01.dfy)<br>**Synchronous KV Store** -- Build a refinement from a protocol (distributed sharded state) to a specification (a logically-centralized abstract map). TODO Conform to 2PC abstract proof obligation structure.
 
 - [`chapter06-refine/exercises/two-phase-commit-impl.dfy`](chapter06-refine/exercises/two-phase-commit-impl.dfy)
 
