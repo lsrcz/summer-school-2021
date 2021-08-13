@@ -84,9 +84,13 @@
 
 ## chapter06-refine
 
-- [`chapter06-refine/exercises/atomic-commit-spec.dfy`](chapter06-refine/exercises/atomic-commit-spec.dfy) -- TODO split into multiple steps: TODO becomes exercise02-03-04
-
 - [`chapter06-refine/exercises/exercise01.dfy`](chapter06-refine/exercises/exercise01.dfy)<br>**Synchronous KV Store** -- Build a refinement from a protocol (distributed sharded state) to a specification (a logically-centralized abstract map). TODO Conform to 2PC abstract proof obligation structure.
+
+- [`chapter06-refine/exercises/exercise02.dfy`](chapter06-refine/exercises/exercise02.dfy)<br>**State Machine Spec for Atomic Commit** -- Build an abstract behavioral model that captures the semantics of an evolving system to use as a refinement reference for its more-complicated implementation.
+
+- [`chapter06-refine/exercises/exercise03.dfy`](chapter06-refine/exercises/exercise03.dfy)<br>**Property for Atomic Commit** -- The state machine model captures AC2 nicely, but let's make it very clear that the model also obeys AC1, AC3 and AC4.
+
+- [`chapter06-refine/exercises/model_for_ex04.dfy`](chapter06-refine/exercises/model_for_ex04.dfy)
 
 - [`chapter06-refine/exercises/two-phase-commit-impl.dfy`](chapter06-refine/exercises/two-phase-commit-impl.dfy)
 
