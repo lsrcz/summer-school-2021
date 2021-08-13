@@ -78,7 +78,7 @@ module Obligations {
     requires Host.GroupWF(c.hosts, v.hosts)
   {
     // All hosts that reach a decision reach the same one
-//#exercise    true
+//#exercise    false // Replace me
 //#start-elide
     || AllWithDecisionAgreeWithThisOne(c, v, Commit)
     || AllWithDecisionAgreeWithThisOne(c, v, Abort)
@@ -91,7 +91,7 @@ module Obligations {
   predicate SafetyAC3(c: Constants, v: Variables)
     requires Host.GroupWF(c.hosts, v.hosts)
   {
-//#exercise    true
+//#exercise    false // Replace me
 //#start-elide
     && (exists hostid:HostId
       :: ValidParticipantId(c, hostid) && ParticipantConstants(c, hostid).preference.No?)
@@ -103,7 +103,7 @@ module Obligations {
   predicate SafetyAC4(c: Constants, v: Variables)
     requires Host.GroupWF(c.hosts, v.hosts)
   {
-//#exercise    true
+//#exercise    false // Replace me
 //#start-elide
     && (forall hostid:HostId
         | ValidParticipantId(c, hostid) :: ParticipantConstants(c, hostid).preference.Yes?)

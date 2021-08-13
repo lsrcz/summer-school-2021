@@ -65,6 +65,7 @@ module CoordinatorHost {
     // WF is for a simple condition that relates every valid Variables state
     // to the Constants.
     predicate WF(c: Constants) {
+//#exercise    true
 //#start-elide
       && |votes| == c.participantCount
 //#end-elide
@@ -163,7 +164,7 @@ module CoordinatorHost {
   predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step, msgOps: MessageOps)
   {
     match step
-//#exercise    ReplaceMeWithYourJayNFSteps => true
+//#exercise    case ReplaceMeWithYourJayNFSteps => true
 //#start-elide
       case SendReqStep => SendReq(c, v, v', msgOps)
       case LearnVoteStep => LearnVote(c, v, v', msgOps)
@@ -186,10 +187,15 @@ module ParticipantHost {
 //#start-elide
   datatype Constants = Constants(hostId: HostId, preference: Vote)
   datatype Variables = Variables(decision: Option<Decision>)
-  {
-    predicate WF(c: Constants) { true } // No useful constraints for the participant
-  }
 //#end-elide
+  {
+    predicate WF(c: Constants) {
+//#exercise      true
+//#start-elide
+      true
+//#end-elide
+    }
+  }
 
   predicate Init(c: Constants, v: Variables, hostId: HostId)
   {
@@ -236,7 +242,7 @@ module ParticipantHost {
   predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step, msgOps: MessageOps)
   {
     match step
-//#exercise    ReplaceMeWithYourJayNFSteps => true
+//#exercise    case ReplaceMeWithYourJayNFSteps => true
 //#start-elide
       case VoteStep => Vote(c, v, v', msgOps)
       case LearnDecisionStep => LearnDecision(c, v, v', msgOps)
