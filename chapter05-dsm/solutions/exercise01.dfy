@@ -24,6 +24,8 @@ include "../../library/library.dfy" // Some handy utilities.
 include "../../library/Environment.dfy"
 
 module Types {
+  import opened Library
+
   type HostId = nat
   datatype Vote = Yes | No
   datatype Decision = Commit | Abort
@@ -39,21 +41,11 @@ module Types {
   datatype MessageOps = MessageOps(recv:Option<Message>, send:Option<Message>)
 }
 
-// Dafny module refinement: NetIfc is defined in Environment, but it has a
-// placeholder (parameter) type for "Message." So we supply that here to
-// get the MessageOps types expected by the Network and DistributedSystem
-// modules.
-module TwoPCNetIfc refines NetIfc {
-  import TwoPCTypes
-  type Message = TwoPCTypes.Message
-}
-
 // There are two host roles in 2PC, Coordinator and Participant. We'll define
 // separate state machines for each.
 module CoordinatorHost {
-  import opened TwoPCTypes
+  import opened Types
   import opened Library
-  import opened TwoPCNetIfc
 
   datatype Constants = Constants(participantCount: nat)
   datatype Variables = Variables(votes: seq<Option<Vote>>, decision: Option<Decision>)
@@ -149,9 +141,8 @@ module CoordinatorHost {
 }
 
 module ParticipantHost {
-  import opened TwoPCTypes
+  import opened Types
   import opened Library
-  import opened TwoPCNetIfc
 
   datatype Constants = Constants(hostId: HostId, preference: Vote)
   datatype Variables = Variables(decision: Option<Decision>)
@@ -204,13 +195,14 @@ module ParticipantHost {
   }
 }
 
-// The DistributedSystem model in Environment only accounts for one notion of
-// Host, so we define a generic Host type that's either Coordinator or Participant.
-module Host refines HostIfc {
+// Define a generic Host as able to be either of the specific roles.
+// This is the ultimate (untrusted) definition of the protocol we're
+// trying to verify.
+module Host {
   import opened Library
+  import opened Types
   import CoordinatorHost
   import ParticipantHost
-  import NI = TwoPCNetIfc
 
   datatype Constants =
     | CoordinatorConstants(coordinator: CoordinatorHost.Constants)
@@ -221,37 +213,137 @@ module Host refines HostIfc {
     | ParticipantVariables(participant: ParticipantHost.Variables)
   {
     predicate WF(c: Constants) {
-      && CoordinatorVariables? <==> c.CoordinatorConstants? // types of c & v agree
+      && (CoordinatorVariables? <==> c.CoordinatorConstants?) // types of c & v agree
     }
   }
 
   // Dispatch Next to appropriate underlying implementation.
-  predicate Next(c: Constants, v: Variables, v': Variables, msgOps: NI.MessageOps)
+  predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
     && v.WF(c)
-    && match c
+    && v'.WF(c)
+    && (match c
       case CoordinatorConstants(_) => CoordinatorHost.Next(c.coordinator, v.coordinator, v'.coordinator, msgOps)
       case ParticipantConstants(_) => ParticipantHost.Next(c.participant, v.participant, v'.participant, msgOps)
+      )
   }
 }
 
-// TODO(jonh): would like to remove 'abstract' here, but public Dafny's module
-// system is bonkers.
-abstract module TwoPCDistributedSystem refines DistributedSystem {
-  import opened Library
-  import HostIfc = Host
+// The (trusted) model of the environment: There is a network that can only deliver
+// messages that some Host (running the protocol) has sent, but once sent, messages
+// can be delivered repeatedly and in any order.
+module Network {
+  import opened Types
 
+  datatype Constants = Constants  // no constants for network
+
+  // Network state is the set of messages ever sent. Once sent, we'll
+  // allow it to be delivered over and over.
+  // (We don't have packet headers, so duplication, besides being realistic,
+  // also doubles as how multiple parties can hear the message.)
+  datatype Variables = Variables(sentMsgs:set<Message>)
+
+  predicate Init(c: Constants, v: Variables)
+  {
+    && v.sentMsgs == {}
+  }
+
+  predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
+  {
+    // Only allow receipt of a message if we've seen it has been sent.
+    && (msgOps.recv.Some? ==> msgOps.recv.value in v.sentMsgs)
+    // Record the sent message, if there was one.
+    && v'.sentMsgs ==
+      v.sentMsgs + if msgOps.send.None? then {} else { msgOps.send.value }
+  }
+}
+
+// The (trusted) model of the distributed system: hosts don't share memory. Each
+// takes its steps independently, interleaved in nondeterministic order with others.
+// They only communicate through the network, and obey the communication model
+// established by the Network model.
+abstract module DistributedSystem {
+  import opened Library
+  import opened Types
+  import Network
+  import Host
+  import CoordinatorHost
+  import ParticipantHost
+
+  datatype Constants = Constants(
+    hosts: seq<Host.Constants>,
+    network: Network.Constants)
+  {
+    predicate ValidHostId(id: HostId) {
+      id < |hosts|
+    }
+  }
+
+  datatype Variables = Variables(
+    hosts: seq<Host.Variables>,
+    network: Network.Variables)
+  {
+    predicate WF(c: Constants) {
+      && 0 < |c.hosts|  // at least a coordinator
+      && |hosts| == |c.hosts|
+    }
+  }
+
+  // ProtocolHostsInit is the only part of this module supplied by the protocol
+  // definition.
+  // This interface gives the specific protocol an opportunity to
+  // set up constraints across the various hosts.
   // Protocol requires one coordinator and the rest participants;
   // coordinator must know how many participants, and participants must know own ids.
   predicate ProtocolHostsInit(c: Constants, v: Variables)
   {
+    // variables are well-formed (same number of host slots as constants expect)
+    && v.WF(c)
+    // Each host is well-formed
+    && (forall hostid:HostId | hostid < |c.hosts| ::
+        v.hosts[hostid].WF(c.hosts[hostid]))
     // Last host is a coordinator, and is inittid to know about the N-1 participants.
-    && Last(c.hosts).CoordinatorHost?
-    && CoordinatorHost.Init(Last(c.hosts).c, Last(v.hosts).v, |c.hosts|-1)
+    && Last(c.hosts).CoordinatorConstants?
+    && CoordinatorHost.Init(Last(c.hosts).coordinator, Last(v.hosts).coordinator, |c.hosts|-1)
     // All the others are participants
-    && (forall hostid | 0 <= hostid < |c.hosts|-1 ::
-        && c.hosts[hostid].c.ParticipantHost?
-        && ParticipantHost.Init(c.hosts[hostid].v, v.hosts[hostid].v, hostid)
+    && (forall hostid:HostId | hostid < |c.hosts|-1 ::
+        && c.hosts[hostid].ParticipantConstants?
+        && ParticipantHost.Init(c.hosts[hostid].participant, v.hosts[hostid].participant, hostid)
       )
+  }
+
+  predicate Init(c: Constants, v: Variables)
+  {
+    && v.WF(c)
+    && ProtocolHostsInit(c, v)
+    && Network.Init(c.network, v.network)
+  }
+
+  predicate HostAction(c: Constants, v: Variables, v': Variables, hostid: HostId, msgOps: MessageOps)
+  {
+    && v.WF(c)
+    && v'.WF(c)
+    && c.ValidHostId(hostid)
+    && Host.Next(c.hosts[hostid], v.hosts[hostid], v'.hosts[hostid], msgOps)
+    // all other hosts UNCHANGED
+    && (forall otherHost:nat | c.ValidHostId(otherHost) && otherHost != hostid :: v'.hosts[otherHost] == v.hosts[otherHost])
+  }
+
+  // JayNF is pretty simple as there's only a single action disjunct
+  datatype Step =
+    | HostActionStep(hostid: HostId, msgOps: MessageOps)
+
+  predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
+  {
+    && v.WF(c)
+    && v'.WF(c)
+    && HostAction(c, v, v', step.hostid, step.msgOps)
+    // network agrees recv has been sent and records sent
+    && Network.Next(c.network, v.network, v'.network, step.msgOps)
+  }
+
+  predicate Next(c: Constants, v: Variables, v': Variables)
+  {
+    exists step :: NextStep(c, v, v', step)
   }
 }
