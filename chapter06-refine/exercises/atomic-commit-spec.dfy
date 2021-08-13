@@ -22,6 +22,8 @@
  * AC-5: (liveness) All processes eventually decide.
  */
 
+include "../../library/library.dfy"
+
 module Types {
   type ParticipantId = nat
 
@@ -62,14 +64,15 @@ module AtomicCommit {
   function UltimateDecision(c: Constants) : Decision
     requires c.WF()
   {
-    if (forall idx:ParticipantId | idx < c.participantCount :: c.preferences[idx] == Yes) then Commit else Abort
+    if (forall idx:ParticipantId | c.ValidParticipant(idx) :: c.preferences[idx] == Yes) then Commit else Abort
   }
 
   predicate Init(c: Constants, v: Variables)
   {
     && c.WF()
     && v.WF(c)
-    && (forall idx:ParticipantId | idx < c.participantCount :: v.participantDecisions[idx].None?)
+    && v.coordinatorDecision.None?
+    && (forall idx:ParticipantId | c.ValidParticipant(idx) :: v.participantDecisions[idx].None?)
   }
 
   predicate ParticipantLearnsDecision(c: Constants, v: Variables, v': Variables, idx: ParticipantId)
@@ -122,7 +125,20 @@ module AtomicCommit {
 // We don't state AC5 because it's a liveness property, which is out of scope
 // for this course.
 module AtomicCommitProperties {
+  import opened Types
   import opened AtomicCommit
+
+  predicate AllWithDecisionAgreeWithThisOne(c: Constants, v: Variables, decision: Decision)
+    requires c.WF()
+    requires v.WF(c)
+    // I pulled this conjunction into a named predicate because Dafny warned of
+    // no trigger for the exists.
+  {
+    && (v.coordinatorDecision.Some? ==> v.coordinatorDecision.value == decision)
+    && (forall idx:ParticipantId
+      | c.ValidParticipant(idx) && v.participantDecisions[idx].Some?
+      :: v.participantDecisions[idx].value == decision)
+  }
 
   predicate SafetyAC1(c: Constants, v: Variables)
     requires c.WF()
@@ -140,7 +156,7 @@ module AtomicCommitProperties {
     requires v.WF(c)
   {
     && (exists idx:ParticipantId
-      :: c.ValidParticipantId(idx) && c.participants[idx].preference.No?)
+      :: c.ValidParticipant(idx) && c.preferences[idx].No?)
       ==> AllWithDecisionAgreeWithThisOne(c, v, Abort)
   }
 
@@ -149,7 +165,7 @@ module AtomicCommitProperties {
     requires v.WF(c)
   {
     && (forall idx:ParticipantId
-        | c.ValidParticipantId(idx) :: c.participants[idx].preference.Yes?)
+        | c.ValidParticipant(idx) :: c.preferences[idx].Yes?)
       ==> AllWithDecisionAgreeWithThisOne(c, v, Commit)
   }
 
@@ -157,9 +173,9 @@ module AtomicCommitProperties {
 
   //#instructor Player 1
   predicate Safety(c: Constants, v: Variables)
-    requires c.WF()
-    requires v.WF(c)
   {
+    && c.WF()
+    && v.WF(c)
     && SafetyAC1(c, v)
     && SafetyAC3(c, v)
     && SafetyAC4(c, v)
@@ -173,7 +189,7 @@ module AtomicCommitProperties {
 
     //requires Inv(c, v)  I think the invariant for the spec is trivial, which is a good thing for a spec!
   lemma SafetyNext(c: Constants, v: Variables, v': Variables)
-    requires Safety(c, v'
+    requires Safety(c, v)
     requires Next(c, v, v')
     ensures Safety(c, v')
   {

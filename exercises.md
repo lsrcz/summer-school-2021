@@ -80,6 +80,8 @@
 
 - [`chapter05-dsm/exercises/exercise03.dfy`](chapter05-dsm/exercises/exercise03.dfy)<br>**Two Phase Commit Safety Proof** -- Prove that the 2PC distributed system (exercise01) accomplishes the Safety spec (exercise02)
 
+- [`chapter05-dsm/exercises/model_for_ex03.dfy`](chapter05-dsm/exercises/model_for_ex03.dfy)
+
 ## chapter06-refine
 
 - [`chapter06-refine/exercises/atomic-commit-spec.dfy`](chapter06-refine/exercises/atomic-commit-spec.dfy) -- TODO split into multiple steps: TODO becomes exercise02-03-04

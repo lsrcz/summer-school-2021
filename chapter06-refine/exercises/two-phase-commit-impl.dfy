@@ -78,6 +78,11 @@ module CoordinatorHost {
   import opened NetIfc
 
   datatype Constants = Constants(hostCount: nat)
+  {
+    predicate ValidParticipantId(idx: nat) {
+      && idx < hostCount
+    }
+  }
   datatype Variables = Variables(votes: seq<Option<Vote>>, decision: Option<Decision>)
   {
     predicate WF(c: Constants) {
@@ -89,7 +94,7 @@ module CoordinatorHost {
   {
     && v.WF(c)
     // No votes recorded yet
-    && (forall hostIdx:ParticipantId | hostIdx < |v.votes| :: v.votes[hostIdx].None?)
+    && (forall hostIdx:ParticipantId | c.ValidParticipantId(hostIdx) :: v.votes[hostIdx].None?)
     // No decision recorded yet
     && v.decision.None?
   }
@@ -120,7 +125,7 @@ module CoordinatorHost {
   predicate AllVotesCollected(c: Constants, v: Variables)
   {
     && v.WF(c)
-    && (forall hostIdx:ParticipantId | hostIdx < |v.votes| :: v.votes[hostIdx].Some?)
+    && (forall hostIdx:ParticipantId | c.ValidParticipantId(hostIdx) :: v.votes[hostIdx].Some?)
   }
 
   predicate ObservesResult(c: Constants, v: Variables, decision: Decision)
@@ -128,7 +133,7 @@ module CoordinatorHost {
     && v.WF(c)
     && AllVotesCollected(c, v)
     && decision ==
-      if (forall hostIdx:ParticipantId | hostIdx < |v.votes| :: v.votes[hostIdx].value.Yes?)
+      if (forall hostIdx:ParticipantId | c.ValidParticipantId(hostIdx) :: v.votes[hostIdx].value.Yes?)
       then Commit
       else Abort
   }
@@ -234,16 +239,16 @@ module DistributedSystem {
     participants: seq<ParticipantHost.Constants>,
     network: Network.Constants)
   {
+    predicate ValidParticipantId(id: ParticipantId) {
+      id < |participants|
+    }
     predicate WF() {
       // Coordinator knows how many participants to expect votes from
       && coordinator.hostCount == |participants|
       // Participants know their own ids
-      && (forall idx | 0<=idx<|participants| :: participants[idx].hostId == idx)
+      && (forall idx:ParticipantId | ValidParticipantId(idx) :: participants[idx].hostId == idx)
       // Note we *DON'T* specify partipants' preference fields; that's the
       // degree of freedom that gives the protocol something to do.
-    }
-    predicate ValidParticipantId(id: ParticipantId) {
-      id < |participants|
     }
   }
 
@@ -315,6 +320,7 @@ module DistributedSystem {
   }
 }
 
+/*
 module Proof {
   import opened Types
   import opened Library
@@ -403,6 +409,7 @@ module Proof {
   { // Trivial, as usual, since safety is a conjunct in Inv.
   }
 }
+*/
 
 abstract module RefinementTheorem {
   import opened Types
@@ -425,18 +432,179 @@ abstract module RefinementTheorem {
     requires DistributedSystem.Next(c, v, v')
     requires Inv(c, v)
     ensures Inv(c, v')
-    ensures AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v'))
+    ensures AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v')) || VariablesAbstraction(c, v) == VariablesAbstraction(c, v')
 
 }
 
 module RefinementProof refines RefinementTheorem {
-  import opened Types
-  import opened Library
-  import opened DistributedSystem
-  import opened AtomicCommit
+  //import opened Types
+  //import opened Library
+  //import opened DistributedSystem
+  //import AtomicCommit
+  import opened CoordinatorHost
 
-  function ConstantsAbstraction(constants: DistributedSystem.Constants) : AtomicCommit.Constants
+  function ConstantsAbstraction(c: DistributedSystem.Constants) : AtomicCommit.Constants
   {
+    AtomicCommit.Constants(c.coordinator.hostCount, seq(|c.participants|, idx requires 0 <= idx < |c.participants| => c.participants[idx].preference))
+  }
 
+  function VariablesAbstraction(c: DistributedSystem.Constants, v: DistributedSystem.Variables) : AtomicCommit.Variables
+  {
+    AtomicCommit.Variables(v.coordinator.decision, seq(|v.participants|, idx requires 0 <= idx < |v.participants| => v.participants[idx].decision))
+  }
+
+  predicate VoteMessagesAgreeWithParticipantPreferences(c: DistributedSystem.Constants, v: DistributedSystem.Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    (forall msg |
+      && msg in v.network.sentMsgs
+      && msg.VoteMsg?
+      && c.ValidParticipantId(msg.sender)
+      :: msg.vote == c.participants[msg.sender].preference
+    )
+  }
+
+  predicate CoordinatorStateSupportedByVote(c: DistributedSystem.Constants, v: DistributedSystem.Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    (forall idx:ParticipantId |
+      && c.ValidParticipantId(idx)
+      && v.coordinator.votes[idx].Some?
+      :: VoteMsg(idx, v.coordinator.votes[idx].value) in v.network.sentMsgs
+    )
+  }
+
+  predicate DecisionMsgsAgreeWithDecision(c: DistributedSystem.Constants, v: DistributedSystem.Variables)
+    requires c.WF()
+    requires v.WF(c)
+  {
+    (forall msg |
+      && msg in v.network.sentMsgs
+      && msg.DecisionMsg?
+      :: CoordinatorHost.ObservesResult(c.coordinator, v.coordinator, msg.decision)
+    )
+  }
+
+  predicate Inv(c: DistributedSystem.Constants, v: DistributedSystem.Variables)
+  {
+    && c.WF()
+    && v.WF(c)
+    && VoteMessagesAgreeWithParticipantPreferences(c, v)
+    && CoordinatorStateSupportedByVote(c, v)
+    && DecisionMsgsAgreeWithDecision(c, v)
+  }
+
+  lemma RefinementInit(c: DistributedSystem.Constants, v: DistributedSystem.Variables)
+    /*
+    requires DistributedSystem.Init(c, v)
+    ensures Inv(c, v)
+    ensures AtomicCommit.Init(ConstantsAbstraction(c), VariablesAbstraction(c, v))*/
+  {
+    assert Inv(c, v);
+    assert AtomicCommit.Init(ConstantsAbstraction(c), VariablesAbstraction(c, v));
+  }
+
+  lemma RefinementNext(c: DistributedSystem.Constants, v: DistributedSystem.Variables, v': DistributedSystem.Variables)
+    /*requires DistributedSystem.Next(c, v, v')
+    requires Inv(c, v)
+    ensures Inv(c, v')
+    ensures AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v')) || VariablesAbstraction(c, v) == VariablesAbstraction(c, v')*/
+  {
+    assert Inv(c, v);
+    assert DistributedSystem.Next(c, v, v');
+
+    assert forall idx:ParticipantId :: ConstantsAbstraction(c).ValidParticipant(idx) == c.coordinator.ValidParticipantId(idx);
+
+    var step :| DistributedSystem.NextStep(c, v, v', step);
+    match step {
+      case CoordinatorStep(msgOps) => {
+        assert DecisionMsgsAgreeWithDecision(c, v'); // Trigger
+        //if VariablesAbstraction(c, v) == VariablesAbstraction(c, v') {
+        assert Coordinator(c, v, v', msgOps);
+        assert CoordinatorHost.Next(c.coordinator, v.coordinator, v'.coordinator, msgOps);
+        assert (forall idx:nat | c.ValidParticipantId(idx) :: v'.participants[idx] == v.participants[idx]);
+
+        //assert exists step2 :: CoordinatorHost.NextStep(c.coordinator, v.coordinator, v'.coordinator, step2, msgOps);
+        var coordinatorStep :| CoordinatorHost.NextStep(c.coordinator, v.coordinator, v'.coordinator, coordinatorStep, msgOps);
+        match coordinatorStep {
+          case SendReqStep() => {
+            assert SendReq(c.coordinator, v.coordinator, v'.coordinator, msgOps);
+            assert v.coordinator == v'.coordinator;
+            assert VariablesAbstraction(c, v) == VariablesAbstraction(c, v');
+            //assert v == v';
+            //assert AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v'));
+          }
+          case LearnVoteStep() => {
+            assert LearnVote(c.coordinator, v.coordinator, v'.coordinator, msgOps);
+            assert VariablesAbstraction(c, v) == VariablesAbstraction(c, v');
+            //assert AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v'));
+          }
+          case DecideStep(decision) => {
+            assert Decide(c.coordinator, v.coordinator, v'.coordinator, decision, msgOps);
+            if(v.coordinator.decision.None?) {
+              //assume false;
+              assert v'.coordinator.decision.Some?;
+              var decision := v'.coordinator.decision.value;
+              assert ObservesResult(c.coordinator, v.coordinator, decision);
+              var abs := ConstantsAbstraction(c);
+
+              /*calc {
+                  AtomicCommit.UltimateDecision(ConstantsAbstraction(c)).Commit?;
+                  forall idx:ParticipantId | ConstantsAbstraction(c).ValidParticipant(idx) :: ConstantsAbstraction(c).preferences[idx] == Yes;
+                  {
+                    //
+                    //assert forall idx:ParticipantId | ConstantsAbstraction(c).ValidParticipant(idx) :: c.participants[idx].preference.Yes? == ConstantsAbstraction(c).preferences[idx].Yes?;
+                    }
+
+                  forall hostIdx:ParticipantId | c.coordinator.ValidParticipantId(hostIdx) :: c.participants[hostIdx].preference.Yes?;
+                  forall hostIdx:ParticipantId | c.coordinator.ValidParticipantId(hostIdx) :: v.coordinator.votes[hostIdx].value.Yes?;
+                  decision.Commit?;
+              }
+
+              if (forall hostIdx:ParticipantId | c.coordinator.ValidParticipantId(hostIdx) :: v.coordinator.votes[hostIdx].value.Yes?) {
+                //assert forall idx |
+                assert decision == Commit;
+                //assert forall idx | 0 <= idx < |c.coordinator.participants| ==> abs.
+
+                assert decision == AtomicCommit.UltimateDecision(ConstantsAbstraction(c));
+
+              } else {
+                assert decision == Abort;
+                assert decision == AtomicCommit.UltimateDecision(ConstantsAbstraction(c));
+              }*/
+
+              //assert AtomicCommit.CoordinatorLearnsDecision(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v'));
+              assert AtomicCommit.NextStep(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v'), AtomicCommit.CoordinatorLearnsStep());
+              //assert AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v'));
+            } else {
+              assert VariablesAbstraction(c, v) == VariablesAbstraction(c, v');
+            }
+          }
+        }
+
+        assert AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v')) || VariablesAbstraction(c, v) == VariablesAbstraction(c, v');
+        //}
+      }
+      case ParticipantStep(idx, msgOps) => {
+        assert Inv(c, v');
+
+        assume AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v')) || VariablesAbstraction(c, v) == VariablesAbstraction(c, v');
+        /*if v != v' {
+          assume AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v'));
+        } */
+      }
+    }
+    assert Inv(c, v');
+
+    //assume AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v')) || v == v';
+
+    /*
+    if (v != v') {
+      var step :| DistributedSystem.NextStep(c, v, v', step);
+
+    }*/
+    //assert AtomicCommit.Next(ConstantsAbstraction(c), VariablesAbstraction(c, v), VariablesAbstraction(c, v'));
   }
 }
