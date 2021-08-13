@@ -1,6 +1,7 @@
 //#title Synchronous KV Store
 //#desc Build a refinement from a protocol (distributed sharded state) to
 //#desc a specification (a logically-centralized abstract map).
+//#desc TODO Conform to 2PC abstract proof obligation structure.
 
 // "Synchronous" means network messages are delivered instantaneously -- we
 // keep the challenge simpler here by pretending messages can be sent and
@@ -118,6 +119,7 @@ module MapSpec {
 }
 
 module Implementation {
+  import opened Library
   import opened Types
 
   type HostIdx = nat
@@ -155,18 +157,6 @@ module Implementation {
     && key in v.maps[idx] // the participating "host" needs to be authoritative on this key
     && output == v.maps[idx][key]
     && v' == v  // UNCHANGED
-  }
-
-  function {:opaque} MapRemoveOne<K,V>(m:map<K,V>, key:K) : (m':map<K,V>)
-    ensures forall k :: k in m && k != key ==> k in m'
-    ensures forall k :: k in m' ==> k in m && k != key
-    ensures forall j :: j in m' ==> m'[j] == m[j]
-    ensures |m'.Keys| <= |m.Keys|
-    ensures |m'| <= |m|
-  {
-    var m':= map j | j in m && j != key :: m[j];
-    assert m'.Keys == m.Keys - {key};
-    m'
   }
 
   // A possible enhancement exercise: transfer many key,value pairs in one step
@@ -275,7 +265,10 @@ module RefinementProof {
   function Abstraction(c: Constants, v: Variables) : MapSpec.Variables
     requires v.WF(c)
   {
+//#exercise    MapSpec.Variables(InitialMap())
+//#start-elide
     MapSpec.Variables(map key | key in KnownKeys(c, v) :: AbstractionOneKey(c, v, key))
+//#end-elide
   }
 
   // This does slow things down quite a bit.
@@ -290,13 +283,16 @@ module RefinementProof {
 
   predicate Inv(c: Constants, v: Variables)
   {
+//#start-elide
     && v.WF(c)
     // Every key lives somewhere.
     && KnownKeys(c, v) == Types.AllKeys()
     // No key lives in two places.
     && KeysHeldUniquely(c, v)
+//#end-elide
   }
 
+//#start-elide
   lemma InitAllKeysEmpty(c: Constants, v: Variables, count: nat)
     requires Init(c, v)
     requires 0 < count <= c.mapCount
@@ -309,44 +305,20 @@ module RefinementProof {
     }
   }
 
-  lemma AllKeysMembership(c: Constants, v: Variables)
-    requires Inv(c, v)
-    ensures forall key ::
-      (key in KnownKeys(c, v) <==> exists hostidx:HostIdx :: hostidx<c.mapCount && key in v.maps[hostidx])
-  {
-    var count := c.mapCount;
-    forall key
-      | key in KnownKeys(c, v)
-      ensures exists hostidx:HostIdx :: hostidx<count && key in v.maps[hostidx]
-    {
-      EachUnionMemberBelongsToASet(MapDomains(c, v));
-      var idx :| 0<=idx<|MapDomains(c, v)| && key in MapDomains(c, v)[idx];
-      assert count == |MapDomains(c, v)|;
-      assert v.maps[idx].Keys == MapDomains(c,v)[idx];
-      assert idx<count && key in v.maps[idx]; // trigger
-    }
-    forall key
-      | exists hostidx:HostIdx :: hostidx<count && key in v.maps[hostidx]
-      ensures key in KnownKeys(c, v)
-    {
-      var hostidx:HostIdx :| hostidx<count && key in v.maps[hostidx];
-      SetsAreSubsetsOfUnion(MapDomains(c, v));
-      assert key in MapDomains(c, v)[hostidx];
-      assert MapDomains(c, v)[hostidx] <= KnownKeys(c, v);
-      assert key in KnownKeys(c, v);
-    }
-  }
-
+//#end-elide
   lemma InitRefines(c: Constants, v: Variables)
     requires c.WF()
     requires Init(c, v)
     ensures MapSpec.Init(Abstraction(c, v))
     ensures Inv(c, v)
   {
+//#start-elide
     InitAllKeysEmpty(c, v, c.mapCount);
     reveal_KeysHeldUniquely();
+//#end-elide
   }
 
+//#start-elide
   lemma ThisIsTheHost(c: Constants, v: Variables, hostidx:HostIdx, key:Key)
     requires v.WF(c)
     requires KeysHeldUniquely(c, v)
@@ -481,6 +453,7 @@ module RefinementProof {
     }
     assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.NoOpStep); // witness
   }
+//#end-elide
 
   lemma NextPreservesInvAndRefines(c: Constants, v: Variables, v': Variables)
     requires Inv(c, v)
@@ -488,6 +461,7 @@ module RefinementProof {
     ensures Inv(c, v')
     ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
   {
+//#start-elide
     var step :| NextStep(c, v, v', step);
     match step
       case InsertStep(idx, key, value) => {
@@ -506,5 +480,6 @@ module RefinementProof {
       case TransferStep(sendIdx, recvIdx, key, value) => {
         TransferPreservesInvAndRefines(c, v, v', sendIdx, recvIdx, key, value);
       }
+//#end-elide
   }
 }

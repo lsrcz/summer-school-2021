@@ -30,6 +30,12 @@ module Obligations {
 //#start-elide
   // Here are some handy accessor functions for dereferencing the coordinator
   // and the participants out of the sequence in Hosts.
+  function CoordinatorConstants(c: Constants) : CoordinatorHost.Constants
+    requires Host.GroupWFConstants(c.hosts)
+  {
+    Last(c.hosts).coordinator
+  }
+
   function CoordinatorVars(c: Constants, v: Variables) : CoordinatorHost.Variables
     requires Host.GroupWF(c.hosts, v.hosts)
   {

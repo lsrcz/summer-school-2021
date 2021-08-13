@@ -72,13 +72,19 @@ module CoordinatorHost {
   }
 
   // All-hosts protocol setup will tell us how many participants are involved
-  predicate Init(c: Constants, v: Variables, participantCount: nat)
+  predicate ConstantsValidForGroup(c: Constants, participantCount: nat)
+  {
+//#exercise    true // replace me
+//#start-elide
+    && c.participantCount == participantCount
+//#end-elide
+  }
+
+  predicate Init(c: Constants, v: Variables)
   {
 //#exercise    true // replace me
 //#start-elide
     && v.WF(c)
-    // ProtocolHostsInit tells us what participantCount to expect.
-    && c.participantCount == participantCount
     // No votes recorded yet
     && (forall hostIdx:HostId | hostIdx < |v.votes| :: v.votes[hostIdx].None?)
     // No decision recorded yet
@@ -180,6 +186,9 @@ module ParticipantHost {
 //#start-elide
   datatype Constants = Constants(hostId: HostId, preference: Vote)
   datatype Variables = Variables(decision: Option<Decision>)
+  {
+    predicate WF(c: Constants) { true } // No useful constraints for the participant
+  }
 //#end-elide
 
   predicate Init(c: Constants, v: Variables, hostId: HostId)
@@ -261,6 +270,11 @@ module Host {
   {
     predicate WF(c: Constants) {
       && (CoordinatorVariables? <==> c.CoordinatorConstants?) // types of c & v agree
+      // subtype WF satisfied
+      && (match c
+            case CoordinatorConstants(_) => coordinator.WF(c.coordinator)
+            case ParticipantConstants(_) => participant.WF(c.participant)
+          )
     }
   }
 
@@ -275,6 +289,8 @@ module Host {
     && Last(grp_c).CoordinatorConstants?
     // All the others are participants
     && (forall hostid:HostId | hostid < |grp_c|-1 :: grp_c[hostid].ParticipantConstants?)
+    // The coordinator's constants must correctly account for the number of participants
+    && CoordinatorHost.ConstantsValidForGroup(Last(grp_c).coordinator, |grp_c|-1)
   }
 
   predicate GroupWF(grp_c: seq<Constants>, grp_v: seq<Variables>)
@@ -296,7 +312,7 @@ module Host {
     // constants & variables are well-formed (same number of host slots as constants expect)
     && GroupWF(grp_c, grp_v)
     // Coordinator is inittid to know about the N-1 participants.
-    && CoordinatorHost.Init(Last(grp_c).coordinator, Last(grp_v).coordinator, |grp_c|-1)
+    && CoordinatorHost.Init(Last(grp_c).coordinator, Last(grp_v).coordinator)
     // Participants initted with their ids.
     && (forall hostid:HostId | hostid < |grp_c|-1 ::
         ParticipantHost.Init(grp_c[hostid].participant, grp_v[hostid].participant, hostid)
