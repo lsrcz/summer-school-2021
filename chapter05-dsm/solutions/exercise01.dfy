@@ -17,11 +17,7 @@
  *   When else? As soon as it doesn't hear Commit!?)
  */
 
-include "../../library/library.dfy" // Some handy utilities.
-
-// Environment models assumptions about the network and the DistributedSystem -- the
-// relationship among the participating hosts.
-include "../../library/Environment.dfy"
+include "../../library/Library.dfy" // Some handy utilities.
 
 module Types {
   import opened Library
@@ -34,29 +30,52 @@ module Types {
   // (There are cleverer ways to parameterize the network module, but
   // we're trying to avoid getting fancy with the Dafny module system.)
   datatype Message =
+//#exercise    ReplaceMe()
+//#start-elide
     | VoteReqMsg                           // from leader
     | VoteMsg(sender: HostId, vote: Vote)  // from participant
     | DecisionMsg(decision: Decision)
+//#end-elide
 
+  // A MessageOps is a "binding variable" used to connect a Host's Next step
+  // (what message got received, what got sent?) with the Network (only allow
+  // receipt of messages sent prior; record newly-sent messages).
+  // Note that both fields are Option. A step predicate can say recv.None?
+  // to indicate that it doesn't need to receive a message to occur.
+  // It can say send.None? to indicate that it doesn't want to transmit a message.
   datatype MessageOps = MessageOps(recv:Option<Message>, send:Option<Message>)
 }
 
 // There are two host roles in 2PC, Coordinator and Participant. We'll define
 // separate state machines for each.
+// This state machine defines how a coordinator host should behave: what state
+// it records, and what actions it's allowed to take in response to incoming
+// messages (or spontaneously by thinking about its existing state).
 module CoordinatorHost {
   import opened Types
   import opened Library
 
+//#exercise  datatype Constants = Constants()
+//#exercise  datatype Variables = Variables()
+//#start-elide
   datatype Constants = Constants(participantCount: nat)
   datatype Variables = Variables(votes: seq<Option<Vote>>, decision: Option<Decision>)
+//#end-elide
   {
+    // WF is for a simple condition that relates every valid Variables state
+    // to the Constants.
     predicate WF(c: Constants) {
+//#start-elide
       && |votes| == c.participantCount
+//#end-elide
     }
   }
 
+  // All-hosts protocol setup will tell us how many participants are involved
   predicate Init(c: Constants, v: Variables, participantCount: nat)
   {
+//#exercise    true // replace me
+//#start-elide
     && v.WF(c)
     // ProtocolHostsInit tells us what participantCount to expect.
     && c.participantCount == participantCount
@@ -64,10 +83,14 @@ module CoordinatorHost {
     && (forall hostIdx:HostId | hostIdx < |v.votes| :: v.votes[hostIdx].None?)
     // No decision recorded yet
     && v.decision.None?
+//#end-elide
   }
 
-  // Protocol steps
-
+  // Protocol steps. Define an action predicate for each step of the protocol
+  // that the coordinator is involved in.
+  // Hint: it's probably easiest to separate the receipt and recording of
+  // incoming votes from detecting that all have arrived and making a decision.
+//#start-elide
   predicate SendReq(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
     && v.WF(c)
@@ -116,24 +139,32 @@ module CoordinatorHost {
     // Transmit the decision
     && msgOps.send == Some(DecisionMsg(decision))
   }
+//#end-elide
 
   // JayNF
   datatype Step =
+//#exercise    ReplaceMeWithYourJayNFSteps()
+//#start-elide
     | SendReqStep
     | LearnVoteStep
     | DecideStep(decision: Decision)
+//#end-elide
 
+  // msgOps is a "binding variable" -- the host and the network have to agree
+  // on its assignment to make a valid transition. So the host explains what
+  // would happen if it could receive a particular message, and the network
+  // decides whether such a message is available for receipt.
   predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step, msgOps: MessageOps)
   {
     match step
+//#exercise    ReplaceMeWithYourJayNFSteps => true
+//#start-elide
       case SendReqStep => SendReq(c, v, v', msgOps)
       case LearnVoteStep => LearnVote(c, v, v', msgOps)
       case DecideStep(decision) => Decide(c, v, v', decision, msgOps)
+//#end-elide
   }
 
-  // msgOps is a "binding variable" -- the host and the network have to agree on its assignment
-  // to make a valid transition. So the host explains what would happen if it could receive a
-  // particular message, and the network decides whether such a message is available for receipt.
   predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
     exists step :: NextStep(c, v, v', step, msgOps)
@@ -144,9 +175,27 @@ module ParticipantHost {
   import opened Types
   import opened Library
 
+//#exercise  datatype Constants = Constants()
+//#exercise  datatype Variables = Variables()
+//#start-elide
   datatype Constants = Constants(hostId: HostId, preference: Vote)
   datatype Variables = Variables(decision: Option<Decision>)
+//#end-elide
 
+  predicate Init(c: Constants, v: Variables, hostId: HostId)
+  {
+//#exercise    true // replace me
+//#start-elide
+    && v.decision.None?
+    // ProtocolHostsInit tells us what our own hostId is so we can
+    // set the return address on outgoing messages.
+    && c.hostId == hostId
+//#end-elide
+  }
+
+  // Protocol steps. Define an action predicate for each step of the protocol
+  // that participant can take.
+//#start-elide
   predicate Vote(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
     && msgOps.recv.Some?
@@ -165,39 +214,37 @@ module ParticipantHost {
     && v'.decision == Some(recvMsg.decision)
     && msgOps.send.None?
   }
-
-  predicate Init(c: Constants, v: Variables, hostId: HostId)
-  {
-    && v.decision.None?
-    // ProtocolHostsInit tells us what our own hostId is so we can
-    // set the return address on outgoing messages.
-    && c.hostId == hostId
-  }
+//#end-elide
 
   // JayNF
   datatype Step =
+//#exercise    ReplaceMeWithYourJayNFSteps()
+//#start-elide
     | VoteStep
     | LearnDecisionStep
+//#end-elide
 
   predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step, msgOps: MessageOps)
   {
     match step
+//#exercise    ReplaceMeWithYourJayNFSteps => true
+//#start-elide
       case VoteStep => Vote(c, v, v', msgOps)
       case LearnDecisionStep => LearnDecision(c, v, v', msgOps)
+//#end-elide
   }
 
-  // msgOps is a "binding variable" -- the host and the network have to agree on its assignment
-  // to make a valid transition. So the host explains what would happen if it could receive a
-  // particular message, and the network decides whether such a message is available for receipt.
   predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
     exists step :: NextStep(c, v, v', step, msgOps)
   }
 }
 
-// Define a generic Host as able to be either of the specific roles.
+// We define a generic Host as able to be either of the specific roles.
 // This is the ultimate (untrusted) definition of the protocol we're
 // trying to verify.
+// This definition is given to you to clarify how the two protocol roles above
+// are pulled together into the ultimate distributed system.
 module Host {
   import opened Library
   import opened Types
@@ -232,6 +279,9 @@ module Host {
 // The (trusted) model of the environment: There is a network that can only deliver
 // messages that some Host (running the protocol) has sent, but once sent, messages
 // can be delivered repeatedly and in any order.
+// This definition is given to you because it's a common assumption you can
+// reuse. Someday you might decide to assume a different network model (e.g.
+// reliable or at-most-once delivery), but this is a good place to start.
 module Network {
   import opened Types
 
@@ -262,6 +312,8 @@ module Network {
 // takes its steps independently, interleaved in nondeterministic order with others.
 // They only communicate through the network, and obey the communication model
 // established by the Network model.
+// This is given to you; it can be reused for just about any shared-nothing-concurrency
+// protocol model.
 abstract module DistributedSystem {
   import opened Library
   import opened Types
