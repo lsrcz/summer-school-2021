@@ -264,6 +264,45 @@ module Host {
     }
   }
 
+  // What property must be true of any group of hosts to run the protocol?
+  // Generic DistributedSystem module calls back into this predicate to ensure
+  // that it has a well-formed *group* of hosts.
+  predicate GroupWFConstants(grp_c: seq<Constants>)
+  {
+    // There must at least be a coordinator
+    && 0 < |grp_c|
+    // Last host is a coordinator
+    && Last(grp_c).CoordinatorConstants?
+    // All the others are participants
+    && (forall hostid:HostId | hostid < |grp_c|-1 :: grp_c[hostid].ParticipantConstants?)
+  }
+
+  predicate GroupWF(grp_c: seq<Constants>, grp_v: seq<Variables>)
+  {
+    && GroupWFConstants(grp_c)
+    // Variables size matches group size defined by grp_c
+    && |grp_v| == |grp_c|
+    // Each host is well-formed
+    && (forall hostid:HostId | hostid < |grp_c| :: grp_v[hostid].WF(grp_c[hostid]))
+  }
+
+  // Generic DistributedSystem module calls back into this predicate to give
+  // the protocol an opportunity to set up constraints across the various
+  // hosts.  Protocol requires one coordinator and the rest participants;
+  // coordinator must know how many participants, and participants must know
+  // own ids.
+  predicate GroupInit(grp_c: seq<Constants>, grp_v: seq<Variables>)
+  {
+    // constants & variables are well-formed (same number of host slots as constants expect)
+    && GroupWF(grp_c, grp_v)
+    // Coordinator is inittid to know about the N-1 participants.
+    && CoordinatorHost.Init(Last(grp_c).coordinator, Last(grp_v).coordinator, |grp_c|-1)
+    // Participants initted with their ids.
+    && (forall hostid:HostId | hostid < |grp_c|-1 ::
+        ParticipantHost.Init(grp_c[hostid].participant, grp_v[hostid].participant, hostid)
+      )
+  }
+
   // Dispatch Next to appropriate underlying implementation.
   predicate Next(c: Constants, v: Variables, v': Variables, msgOps: MessageOps)
   {
@@ -314,7 +353,7 @@ module Network {
 // established by the Network model.
 // This is given to you; it can be reused for just about any shared-nothing-concurrency
 // protocol model.
-abstract module DistributedSystem {
+module DistributedSystem {
   import opened Library
   import opened Types
   import Network
@@ -334,47 +373,18 @@ abstract module DistributedSystem {
   datatype Variables = Variables(
     hosts: seq<Host.Variables>,
     network: Network.Variables)
-  {
-    predicate WF(c: Constants) {
-      && 0 < |c.hosts|  // at least a coordinator
-      && |hosts| == |c.hosts|
-    }
-  }
-
-  // ProtocolHostsInit is the only part of this module supplied by the protocol
-  // definition.
-  // This interface gives the specific protocol an opportunity to
-  // set up constraints across the various hosts.
-  // Protocol requires one coordinator and the rest participants;
-  // coordinator must know how many participants, and participants must know own ids.
-  predicate ProtocolHostsInit(c: Constants, v: Variables)
-  {
-    // variables are well-formed (same number of host slots as constants expect)
-    && v.WF(c)
-    // Each host is well-formed
-    && (forall hostid:HostId | hostid < |c.hosts| ::
-        v.hosts[hostid].WF(c.hosts[hostid]))
-    // Last host is a coordinator, and is inittid to know about the N-1 participants.
-    && Last(c.hosts).CoordinatorConstants?
-    && CoordinatorHost.Init(Last(c.hosts).coordinator, Last(v.hosts).coordinator, |c.hosts|-1)
-    // All the others are participants
-    && (forall hostid:HostId | hostid < |c.hosts|-1 ::
-        && c.hosts[hostid].ParticipantConstants?
-        && ParticipantHost.Init(c.hosts[hostid].participant, v.hosts[hostid].participant, hostid)
-      )
-  }
 
   predicate Init(c: Constants, v: Variables)
   {
-    && v.WF(c)
-    && ProtocolHostsInit(c, v)
+    && Host.GroupWF(c.hosts, v.hosts)
+    && Host.GroupInit(c.hosts, v.hosts)
     && Network.Init(c.network, v.network)
   }
 
   predicate HostAction(c: Constants, v: Variables, v': Variables, hostid: HostId, msgOps: MessageOps)
   {
-    && v.WF(c)
-    && v'.WF(c)
+    && Host.GroupWF(c.hosts, v.hosts)
+    && Host.GroupWF(c.hosts, v'.hosts)
     && c.ValidHostId(hostid)
     && Host.Next(c.hosts[hostid], v.hosts[hostid], v'.hosts[hostid], msgOps)
     // all other hosts UNCHANGED
@@ -387,8 +397,6 @@ abstract module DistributedSystem {
 
   predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
   {
-    && v.WF(c)
-    && v'.WF(c)
     && HostAction(c, v, v', step.hostid, step.msgOps)
     // network agrees recv has been sent and records sent
     && Network.Next(c.network, v.network, v'.network, step.msgOps)

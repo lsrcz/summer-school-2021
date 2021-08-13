@@ -17,31 +17,59 @@
  *
  */
 
+// Note that we include the result of exercise01. If you have doubts about the
+// model you built there, please contact an instructor for a correct solution
+// to build on for this exercise.
 include "exercise01.dfy"
 
 module Obligations {
   import opened Types
   import opened Library
-  import opened TwoPCDistributedSystem
+  import opened DistributedSystem
 
 //#start-elide
+  // Here are some handy accessor functions for dereferencing the coordinator
+  // and the participants out of the sequence in Hosts.
+  function CoordinatorVars(c: Constants, v: Variables) : CoordinatorHost.Variables
+    requires Host.GroupWF(c.hosts, v.hosts)
+  {
+    Last(v.hosts).coordinator
+  }
+
+  predicate ValidParticipantId(c: Constants, hostid: HostId)
+  {
+    hostid < |c.hosts|-1
+  }
+
+  function ParticipantConstants(c: Constants, hostid: HostId) : ParticipantHost.Constants
+    requires Host.GroupWFConstants(c.hosts)
+    requires ValidParticipantId(c, hostid)
+  {
+    c.hosts[hostid].participant
+  }
+
+  function ParticipantVars(c: Constants, v: Variables, hostid: HostId) : ParticipantHost.Variables
+    requires Host.GroupWF(c.hosts, v.hosts)
+    requires ValidParticipantId(c, hostid)
+  {
+    v.hosts[hostid].participant
+  }
+
   predicate AllWithDecisionAgreeWithThisOne(c: Constants, v: Variables, decision: Decision)
-    requires c.WF()
-    requires v.WF(c)
+    requires Host.GroupWF(c.hosts, v.hosts)
     // I pulled this conjunction into a named predicate because Dafny warned of
     // no trigger for the exists.
   {
-    && (v.coordinator.decision.Some? ==> v.coordinator.decision.value == decision)
-    && (forall idx:ParticipantId
-      | c.ValidParticipantId(idx) && v.participants[idx].decision.Some?
-      :: v.participants[idx].decision.value == decision)
+    && (CoordinatorVars(c, v).decision.Some? ==> CoordinatorVars(c, v).decision.value == decision)
+    && (forall hostid:HostId
+      | ValidParticipantId(c, hostid) && ParticipantVars(c, v, hostid).decision.Some?
+      :: ParticipantVars(c, v, hostid).decision.value == decision)
   }
 
 //#end-elide
   // AC-1: All processes that reach a decision reach the same one.
   predicate SafetyAC1(c: Constants, v: Variables)
-    requires c.WF()
-    requires v.WF(c)
+    requires Host.GroupWF(c.hosts, v.hosts)
   {
     // All hosts that reach a decision reach the same one
 //#exercise    true
@@ -55,26 +83,24 @@ module Obligations {
 
   // AC-3: The Commit decision can only be reached if all processes prefer Yes.
   predicate SafetyAC3(c: Constants, v: Variables)
-    requires c.WF()
-    requires v.WF(c)
+    requires Host.GroupWF(c.hosts, v.hosts)
   {
 //#exercise    true
 //#start-elide
-    && (exists idx:ParticipantId
-      :: c.ValidParticipantId(idx) && c.participants[idx].preference.No?)
+    && (exists hostid:HostId
+      :: ValidParticipantId(c, hostid) && ParticipantConstants(c, hostid).preference.No?)
       ==> AllWithDecisionAgreeWithThisOne(c, v, Abort)
 //#end-elide
   }
 
   // AC-4: If all processes prefer Yes, then the decision must be Commit.
   predicate SafetyAC4(c: Constants, v: Variables)
-    requires c.WF()
-    requires v.WF(c)
+    requires Host.GroupWF(c.hosts, v.hosts)
   {
 //#exercise    true
 //#start-elide
-    && (forall idx:ParticipantId
-        | c.ValidParticipantId(idx) :: c.participants[idx].preference.Yes?)
+    && (forall hostid:HostId
+        | ValidParticipantId(c, hostid) :: ParticipantConstants(c, hostid).preference.Yes?)
       ==> AllWithDecisionAgreeWithThisOne(c, v, Commit)
 //#end-elide
   }
@@ -83,8 +109,7 @@ module Obligations {
 
   //#instructor Player 1
   predicate Safety(c: Constants, v: Variables)
-    requires c.WF()
-    requires v.WF(c)
+    requires Host.GroupWF(c.hosts, v.hosts)
   {
     && SafetyAC1(c, v)
     && SafetyAC3(c, v)
