@@ -76,18 +76,18 @@ module Proof {
 
     var step :| NextStep(c, v, v', step);   // Witness
 
+    // sklomize msg from DecisionMsgsAgreeWithDecision
     forall msg |
       && msg in v'.network.sentMsgs
-      && msg.VoteMsg?
-      && ValidParticipantId(c, msg.sender)
-      ensures msg.vote == ParticipantConstants(c, msg.sender).preference
+      && msg.DecisionMsg?
+      ensures CoordinatorHost.ObservesResult(CoordinatorConstants(c), CoordinatorVars(c, v'), msg.decision)
     {
       var hostid := step.hostid;
-      assert Host.Next(c.hosts[hostid], v.hosts[hostid], v'.hosts[hostid], step.msgOps);
+      assert Host.Next(c.hosts[hostid], v.hosts[hostid], v'.hosts[hostid], step.msgOps);  // observe trigger
+      if msg in v.network.sentMsgs {  // observe trigger
+      }
     }
-    assert VoteMessagesAgreeWithParticipantPreferences(c, v');
-
-    assert Safety(c, v');
+    assert Safety(c, v'); // somehow this trigger is necessary to get the forall above! Bizarre.
   }
 
   lemma InvImpliesSafety(c: Constants, v: Variables)
