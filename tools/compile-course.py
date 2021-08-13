@@ -96,6 +96,7 @@ class Element:
         output_line = None
       elif input_line.startswith("//#start-elide"):
         # multi-line elision
+        assert not elide    # mismatched start-end elide
         elide = True
         output_line = None
       elif input_line.startswith("//#end-elide"):
