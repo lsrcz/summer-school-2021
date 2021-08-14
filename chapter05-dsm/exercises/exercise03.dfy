@@ -6,14 +6,15 @@
 
 include "model_for_ex03.dfy"
 
-module Proof {
+module TwoPCInvariantProof {
+  import opened CommitTypes
   import opened Types
   import opened Library
   import opened DistributedSystem
   import opened Obligations
 
   predicate DecisionMsgsAgreeWithDecision(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     (forall msg |
       && msg in v.network.sentMsgs
@@ -24,7 +25,7 @@ module Proof {
 
   predicate Inv(c: Constants, v: Variables)
   {
-    && Host.GroupWF(c.hosts, v.hosts)
+    && v.WF(c)
     // We'll give you one invariant to get you started...
     && DecisionMsgsAgreeWithDecision(c, v)
     // ...but you'll need more.

@@ -28,7 +28,7 @@
 
 - [`chapter01-basics/exercises/exercise13.dfy`](chapter01-basics/exercises/exercise13.dfy)<br>**Quantifiers**
 
-- [`chapter01-basics/exercises/exercise14.dfy`](chapter01-basics/exercises/exercise14.dfy)<br>**Set comprehensions, maps**
+- [`chapter01-basics/exercises/exercise14.dfy`](chapter01-basics/exercises/exercise14.dfy)<br>**Maps. Set, Map and Sequence comprehensions.**
 
 - [`chapter01-basics/exercises/exercise15.dfy`](chapter01-basics/exercises/exercise15.dfy)<br>**Comprehensions, the finite heuristic, axioms, recursion**
 
@@ -80,7 +80,7 @@
 
 - [`chapter05-dsm/exercises/exercise03.dfy`](chapter05-dsm/exercises/exercise03.dfy)<br>**Two Phase Commit Safety Proof** -- Prove that the 2PC distributed system (exercise01) accomplishes the Safety spec (exercise02)
 
-- [`chapter05-dsm/exercises/model_for_ex03.dfy`](chapter05-dsm/exercises/model_for_ex03.dfy)
+- [`chapter05-dsm/exercises/model_for_ex03.dfy`](chapter05-dsm/exercises/model_for_ex03.dfy) -- Given model for exercise03
 
 ## chapter06-refine
 
@@ -88,9 +88,11 @@
 
 - [`chapter06-refine/exercises/exercise02.dfy`](chapter06-refine/exercises/exercise02.dfy)<br>**State Machine Spec for Atomic Commit** -- Build an abstract behavioral model that captures the semantics of an evolving system to use as a refinement reference for its more-complicated implementation.
 
-- [`chapter06-refine/exercises/exercise03.dfy`](chapter06-refine/exercises/exercise03.dfy)<br>**Property for Atomic Commit** -- The state machine model captures AC2 nicely, but let's make it very clear that the model also obeys AC1, AC3 and AC4.
+- [`chapter06-refine/exercises/exercise03.dfy`](chapter06-refine/exercises/exercise03.dfy)<br>**Property Lemmas for Atomic Commit** -- The state machine model captures AC2 nicely, but let's make it very clear that the model also obeys AC1, AC3 and AC4.
 
-- [`chapter06-refine/exercises/model_for_ex04.dfy`](chapter06-refine/exercises/model_for_ex04.dfy)
+- [`chapter06-refine/exercises/exercise04.dfy`](chapter06-refine/exercises/exercise04.dfy)<br>**Refinement proof for 2PC** -- Show that Two Phase Commit refines the Atomic Commit sate machine spec.
 
-- [`chapter06-refine/exercises/two-phase-commit-impl.dfy`](chapter06-refine/exercises/two-phase-commit-impl.dfy)
+- [`chapter06-refine/exercises/impl_model_for_ex04.dfy`](chapter06-refine/exercises/impl_model_for_ex04.dfy) -- Implementation state machine for refinement proof in exercise04.
+
+- [`chapter06-refine/exercises/spec_model_for_ex04.dfy`](chapter06-refine/exercises/spec_model_for_ex04.dfy) -- Specification state machine for refinement proof in exercise04.
 

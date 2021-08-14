@@ -23,13 +23,14 @@
 include "exercise01.dfy"
 
 module Obligations {
+  import opened CommitTypes
   import opened Types
   import opened Library
   import opened DistributedSystem
 
   // AC-1: All processes that reach a decision reach the same one.
   predicate SafetyAC1(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     // All hosts that reach a decision reach the same one
     false // Replace me
@@ -39,14 +40,14 @@ module Obligations {
 
   // AC-3: The Commit decision can only be reached if all processes prefer Yes.
   predicate SafetyAC3(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     false // Replace me
   }
 
   // AC-4: If all processes prefer Yes, then the decision must be Commit.
   predicate SafetyAC4(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     false // Replace me
   }
@@ -55,7 +56,7 @@ module Obligations {
 
   //#instructor Player 1
   predicate Safety(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     && SafetyAC1(c, v)
     && SafetyAC3(c, v)

@@ -22,13 +22,21 @@
  */
 
 include "../../library/Library.dfy" // Some handy utilities.
+// Elided from student dir; simply directly-included into solutions
+// and given models
+module CommitTypes {
+  // How a particular participant feels.
+  datatype Vote = Yes | No
+  // What decision has been reached by the protocol.
+  datatype Decision = Commit | Abort
+}
+
 
 module Types {
   import opened Library
+  import opened CommitTypes
 
   type HostId = nat
-  datatype Vote = Yes | No
-  datatype Decision = Commit | Abort
 
   // Have to define our message datatype so network can refer to it.
   // (There are cleverer ways to parameterize the network module, but
@@ -51,6 +59,7 @@ module Types {
 // it records, and what actions it's allowed to take in response to incoming
 // messages (or spontaneously by thinking about its existing state).
 module CoordinatorHost {
+  import opened CommitTypes
   import opened Types
   import opened Library
 
@@ -104,6 +113,7 @@ module CoordinatorHost {
 }
 
 module ParticipantHost {
+  import opened CommitTypes
   import opened Types
   import opened Library
 
@@ -154,6 +164,7 @@ module ParticipantHost {
 // are pulled together into the ultimate distributed system.
 module Host {
   import opened Library
+  import opened CommitTypes
   import opened Types
   import CoordinatorHost
   import ParticipantHost
@@ -241,6 +252,7 @@ module Host {
 // reuse. Someday you might decide to assume a different network model (e.g.
 // reliable or at-most-once delivery), but this is a good place to start.
 module Network {
+  import opened CommitTypes
   import opened Types
 
   datatype Constants = Constants  // no constants for network
@@ -274,6 +286,7 @@ module Network {
 // protocol model.
 module DistributedSystem {
   import opened Library
+  import opened CommitTypes
   import opened Types
   import Network
   import Host
@@ -284,6 +297,9 @@ module DistributedSystem {
     hosts: seq<Host.Constants>,
     network: Network.Constants)
   {
+    predicate WF() {
+      Host.GroupWFConstants(hosts)
+    }
     predicate ValidHostId(id: HostId) {
       id < |hosts|
     }
@@ -292,18 +308,24 @@ module DistributedSystem {
   datatype Variables = Variables(
     hosts: seq<Host.Variables>,
     network: Network.Variables)
+  {
+    predicate WF(c: Constants) {
+      && c.WF()
+      && Host.GroupWF(c.hosts, hosts)
+    }
+  }
 
   predicate Init(c: Constants, v: Variables)
   {
-    && Host.GroupWF(c.hosts, v.hosts)
+    && v.WF(c)
     && Host.GroupInit(c.hosts, v.hosts)
     && Network.Init(c.network, v.network)
   }
 
   predicate HostAction(c: Constants, v: Variables, v': Variables, hostid: HostId, msgOps: MessageOps)
   {
-    && Host.GroupWF(c.hosts, v.hosts)
-    && Host.GroupWF(c.hosts, v'.hosts)
+    && v.WF(c)
+    && v'.WF(c)
     && c.ValidHostId(hostid)
     && Host.Next(c.hosts[hostid], v.hosts[hostid], v'.hosts[hostid], msgOps)
     // all other hosts UNCHANGED

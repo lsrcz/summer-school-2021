@@ -1,7 +1,8 @@
-//#title State Machine Spec for Atomic Commit
-//#desc Build an abstract behavioral model that captures the
-//#desc semantics of an evolving system to use as a refinement
-//#desc reference for its more-complicated implementation.
+//#desc Specification state machine for refinement proof in exercise04.
+
+// This file is an instructor-provided solution to the Atomic Commit spec in
+// exercise02, so you're not doing battle with a spec that's impossible to
+// satisfy -- or getting away with refining to a spec that's trivial.
 
 /*
  * Define the specification of atomic commit in the form of a state
@@ -27,15 +28,7 @@
  */
 
 include "../../library/Library.dfy"
-// Elided from student dir; simply directly-included into solutions
-// and given models
-module CommitTypes {
-  // How a particular participant feels.
-  datatype Vote = Yes | No
-  // What decision has been reached by the protocol.
-  datatype Decision = Commit | Abort
-}
-
+include "../../chapter05-dsm/solutions/elide-types.dfy"
 
 // This is the specification state machine. It defines what the implementation
 // is trying to accomplish, while ignoring all implementation details.
@@ -71,7 +64,10 @@ module AtomicCommit {
 
   predicate Init(c: Constants, v: Variables)
   {
-    true // Replace me
+    && c.WF()
+    && v.WF(c)
+    && v.coordinatorDecision.None?
+    && (forall idx:ParticipantId | c.ValidParticipant(idx) :: v.participantDecisions[idx].None?)
   }
 
   // We can tell what the ultimate decision has to be just from the constants.
@@ -80,13 +76,32 @@ module AtomicCommit {
   function UltimateDecision(c: Constants) : Decision
     requires c.WF()
   {
-    Commit // Replace me
+    if (forall idx:ParticipantId | c.ValidParticipant(idx) :: c.preferences[idx] == Yes) then Commit else Abort
   }
 
+  predicate ParticipantLearnsDecision(c: Constants, v: Variables, v': Variables, idx: ParticipantId)
+  {
+    && c.WF()
+    && v.WF(c)
+    && v'.WF(c)
+    && c.ValidParticipant(idx)
+    && v.participantDecisions[idx].None?  // enforces one-time decision property
+    && v' == v.(participantDecisions := v.participantDecisions[idx := Some(UltimateDecision(c))])
+  }
+
+  predicate CoordinatorLearnsDecision(c: Constants, v: Variables, v': Variables)
+  {
+    && c.WF()
+    && v.WF(c)
+    && v'.WF(c)
+    && v.coordinatorDecision.None?  // enforces one-time decision property
+    && v' == v.(coordinatorDecision := Some(UltimateDecision(c)))
+  }
 
   // JayNF
   datatype Step =
-    ReplaceMeWithYourJayNFSteps()
+    | ParticipantLearnsStep(idx:ParticipantId)
+    | CoordinatorLearnsStep()
 
   predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step)
   {
@@ -95,7 +110,8 @@ module AtomicCommit {
     && v'.WF(c)
     && (
       match step
-    case ReplaceMeWithYourJayNFSteps => true
+        case ParticipantLearnsStep(idx) => ParticipantLearnsDecision(c, v, v', idx)
+        case CoordinatorLearnsStep() => CoordinatorLearnsDecision(c, v, v')
       )
   }
 
