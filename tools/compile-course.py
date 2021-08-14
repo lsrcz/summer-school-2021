@@ -71,8 +71,10 @@ class Element:
     lines = [line.rstrip() for line in open(inlinepath).readlines()]
     output_lines = []
     for line in lines:
-      if line.startswith("include") and not "library" in line:
-            # what a hackaroo
+      if (line.startswith("include")
+          # what a hackaroo
+          and not "library" in line
+          and not "elide" in line):
         output_lines += self.inline(inlinepath, line)
       elif line.startswith("//#"):
         pass
