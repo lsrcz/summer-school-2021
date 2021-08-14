@@ -8,7 +8,7 @@
 // delivered atomically.
 
 
-include "../../library/library.dfy"
+include "../../library/Library.dfy"
 
 module Types {
   // Rather than concretely explain the Key and Value types, we define the spec
@@ -210,7 +210,7 @@ module RefinementProof {
   // to a (deliberate) stupidity in Dafny: it doesn't treat :| expressions
   // as subsitution-equivalent, even though the are (as evidenced by pulling
   // one into a function).
-  function TheHostWithKey(c: Constants, v: Variables, key:Key) : HostIdx
+  function KeyHolder(c: Constants, v: Variables, key:Key) : HostIdx
     requires v.WF(c)
     requires exists hostidx :: HostHasKey(c, v, hostidx, key);
   {
@@ -222,10 +222,13 @@ module RefinementProof {
   function AbstractionOneKey(c: Constants, v: Variables, key:Key) : Value
     requires v.WF(c)
   {
+//#exercise    DefaultValue() // Replace me
+//#start-elide
     if exists idx :: HostHasKey(c, v, idx, key)
     then
-      v.maps[TheHostWithKey(c, v, key)][key]
+      v.maps[KeyHolder(c, v, key)][key]
     else DefaultValue()
+//#end-elide
   }
 
   // We construct the finite set of possible map keys here, all
@@ -265,13 +268,17 @@ module RefinementProof {
   function Abstraction(c: Constants, v: Variables) : MapSpec.Variables
     requires v.WF(c)
   {
-//#exercise    MapSpec.Variables(InitialMap())
+//#exercise    MapSpec.Variables(InitialMap()) // Replace me
 //#start-elide
     MapSpec.Variables(map key | key in KnownKeys(c, v) :: AbstractionOneKey(c, v, key))
 //#end-elide
   }
 
-  // This does slow things down quite a bit.
+//#elide  // This does slow things down quite a bit.
+  // This definition is useful, but a bit trigger-happy, so we made it
+  // opaque. This means that its body is hidden from Dafny, unless you
+  // explicitly write "reveal_KeysHeldUniquely();", at which point the
+  // body of the predicate becomes available within the current context
   predicate {:opaque} KeysHeldUniquely(c: Constants, v: Variables)
     requires v.WF(c)
   {
@@ -283,6 +290,7 @@ module RefinementProof {
 
   predicate Inv(c: Constants, v: Variables)
   {
+//#exercise    false // Replace me
 //#start-elide
     && v.WF(c)
     // Every key lives somewhere.
@@ -318,15 +326,17 @@ module RefinementProof {
 //#end-elide
   }
 
-//#start-elide
-  lemma ThisIsTheHost(c: Constants, v: Variables, hostidx:HostIdx, key:Key)
+  // Since we know that keys are held uniquely, if we've found a host that holds a key, 
+  // that can be the only solution to the 'choose' operation that defines KeyHolder.
+  lemma AnyHostWithKeyIsKeyHolder(c: Constants, v: Variables, hostidx:HostIdx, key:Key)
     requires v.WF(c)
     requires KeysHeldUniquely(c, v)
     requires HostHasKey(c, v, hostidx, key)
-    ensures TheHostWithKey(c, v, key) == hostidx
+    ensures KeyHolder(c, v, key) == hostidx
   {
     reveal_KeysHeldUniquely();
   }
+
 
   lemma InsertPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, insertHost: HostIdx, insertedKey: Key, value: Value)
     requires Inv(c, v)
@@ -336,6 +346,7 @@ module RefinementProof {
     ensures Inv(c, v')
     ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
   {
+//#start-elide
     var abstractMap := Abstraction(c, v).mapp;
     var abstractMap' := Abstraction(c, v').mapp;
 
@@ -366,12 +377,12 @@ module RefinementProof {
       }
       if key in abstractMap' {
         if key == insertedKey {
-          ThisIsTheHost(c, v', insertHost, key);
+          AnyHostWithKeyIsKeyHolder(c, v', insertHost, key);
           assert abstractMap'[key] == value;  // case goal
         } else {
           var keyIdx := GetIndexForMember(MapDomains(c, v'), key);
-          ThisIsTheHost(c, v', keyIdx, key);
-          ThisIsTheHost(c, v, keyIdx, key);
+          AnyHostWithKeyIsKeyHolder(c, v', keyIdx, key);
+          AnyHostWithKeyIsKeyHolder(c, v, keyIdx, key);
           assert key in abstractMap by {
             SetsAreSubsetsOfUnion(MapDomains(c, v));
             assert MapDomains(c, v)[keyIdx] <= KnownKeys(c, v);  // trigger
@@ -385,6 +396,27 @@ module RefinementProof {
       assert abstractMap'.Keys == KnownKeys(c, v'); // trigger
     }
     assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.InsertOpStep(insertedKey, value)); // witness
+//#end-elide
+  }
+
+  lemma QueryPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, queryHost: HostIdx, key: Key, output: Value)
+    requires Inv(c, v)
+    requires Next(c, v, v')
+    requires c.ValidHost(queryHost)
+    requires Query(c, v, v', queryHost, key, output)
+    ensures Inv(c, v')
+    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
+  {
+//#start-elide
+    assert v == v'; // weirdly obvious trigger
+    assert Inv(c, v') by { reveal_KeysHeldUniquely(); }
+    assert key in KnownKeys(c, v) by { HostKeysSubsetOfKnownKeys(c, v, c.mapCount); }
+    assert output == Abstraction(c, v).mapp[key] by {
+      assert HostHasKey(c, v, queryHost, key);  // witness
+      reveal_KeysHeldUniquely();
+    }
+    assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.QueryOpStep(key, output)); // witness
+//#end-elide
   }
 
   lemma TransferPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, sendIdx: HostIdx, recvIdx: HostIdx, sentKey: Key, value: Value)
@@ -396,6 +428,7 @@ module RefinementProof {
     ensures Inv(c, v')
     ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
   {
+//#start-elide
     // domain preserved
     forall key
       ensures key in Abstraction(c, v).mapp <==> key in Abstraction(c, v').mapp
@@ -443,8 +476,8 @@ module RefinementProof {
 //      assert v'.maps[idx'][key] == v.maps[idx][key];  // hey look same values
 
       // Tie from particular map up to abstraction
-      ThisIsTheHost(c, v', idx', key);
-      ThisIsTheHost(c, v, idx, key);
+      AnyHostWithKeyIsKeyHolder(c, v', idx', key);
+      AnyHostWithKeyIsKeyHolder(c, v, idx, key);
     }
 
     assert KnownKeys(c, v') == Types.AllKeys() by {
@@ -452,8 +485,8 @@ module RefinementProof {
       assert KnownKeys(c, v) == Abstraction(c, v).mapp.Keys;    // trigger
     }
     assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.NoOpStep); // witness
-  }
 //#end-elide
+  }
 
   lemma NextPreservesInvAndRefines(c: Constants, v: Variables, v': Variables)
     requires Inv(c, v)
@@ -468,14 +501,7 @@ module RefinementProof {
         InsertPreservesInvAndRefines(c, v, v', idx, key, value);
       }
       case QueryStep(idx, key, output) => {
-        assert v == v'; // weirdly obvious trigger
-        assert Inv(c, v') by { reveal_KeysHeldUniquely(); }
-        assert key in KnownKeys(c, v) by { HostKeysSubsetOfKnownKeys(c, v, c.mapCount); }
-        assert output == Abstraction(c, v).mapp[key] by {
-          assert HostHasKey(c, v, idx, key);  // witness
-          reveal_KeysHeldUniquely();
-        }
-        assert MapSpec.NextStep(Abstraction(c, v), Abstraction(c, v'), MapSpec.QueryOpStep(key, output)); // witness
+        QueryPreservesInvAndRefines(c, v, v', idx, key, output);
       }
       case TransferStep(sendIdx, recvIdx, key, value) => {
         TransferPreservesInvAndRefines(c, v, v', sendIdx, recvIdx, key, value);
