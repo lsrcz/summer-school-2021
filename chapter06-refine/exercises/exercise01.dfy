@@ -8,7 +8,7 @@
 // delivered atomically.
 
 
-include "../../library/library.dfy"
+include "../../library/Library.dfy"
 
 module Types {
   // Rather than concretely explain the Key and Value types, we define the spec
@@ -210,7 +210,7 @@ module RefinementProof {
   // to a (deliberate) stupidity in Dafny: it doesn't treat :| expressions
   // as subsitution-equivalent, even though the are (as evidenced by pulling
   // one into a function).
-  function TheHostWithKey(c: Constants, v: Variables, key:Key) : HostIdx
+  function KeyHolder(c: Constants, v: Variables, key:Key) : HostIdx
     requires v.WF(c)
     requires exists hostidx :: HostHasKey(c, v, hostidx, key);
   {
@@ -222,10 +222,7 @@ module RefinementProof {
   function AbstractionOneKey(c: Constants, v: Variables, key:Key) : Value
     requires v.WF(c)
   {
-    if exists idx :: HostHasKey(c, v, idx, key)
-    then
-      v.maps[TheHostWithKey(c, v, key)][key]
-    else DefaultValue()
+    DefaultValue() // Replace me
   }
 
   // We construct the finite set of possible map keys here, all
@@ -265,10 +262,13 @@ module RefinementProof {
   function Abstraction(c: Constants, v: Variables) : MapSpec.Variables
     requires v.WF(c)
   {
-    MapSpec.Variables(InitialMap())
+    MapSpec.Variables(InitialMap()) // Replace me
   }
 
-  // This does slow things down quite a bit.
+  // This definition is useful, but a bit trigger-happy, so we made it
+  // opaque. This means that its body is hidden from Dafny, unless you
+  // explicitly write "reveal_KeysHeldUniquely();", at which point the
+  // body of the predicate becomes available within the current context
   predicate {:opaque} KeysHeldUniquely(c: Constants, v: Variables)
     requires v.WF(c)
   {
@@ -280,6 +280,7 @@ module RefinementProof {
 
   predicate Inv(c: Constants, v: Variables)
   {
+    false // Replace me
   }
 
   lemma InitRefines(c: Constants, v: Variables)
@@ -290,6 +291,48 @@ module RefinementProof {
   {
   }
 
+  // Since we know that keys are held uniquely, if we've found a host that holds a key,
+  // that can be the only solution to the 'choose' operation that defines KeyHolder.
+  lemma AnyHostWithKeyIsKeyHolder(c: Constants, v: Variables, hostidx:HostIdx, key:Key)
+    requires v.WF(c)
+    requires KeysHeldUniquely(c, v)
+    requires HostHasKey(c, v, hostidx, key)
+    ensures KeyHolder(c, v, key) == hostidx
+  {
+    reveal_KeysHeldUniquely();
+  }
+
+
+  lemma InsertPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, insertHost: HostIdx, insertedKey: Key, value: Value)
+    requires Inv(c, v)
+    requires Next(c, v, v')
+    requires c.ValidHost(insertHost)
+    requires Insert(c, v, v', insertHost, insertedKey, value)
+    ensures Inv(c, v')
+    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
+  {
+  }
+
+  lemma QueryPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, queryHost: HostIdx, key: Key, output: Value)
+    requires Inv(c, v)
+    requires Next(c, v, v')
+    requires c.ValidHost(queryHost)
+    requires Query(c, v, v', queryHost, key, output)
+    ensures Inv(c, v')
+    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
+  {
+  }
+
+  lemma TransferPreservesInvAndRefines(c: Constants, v: Variables, v': Variables, sendIdx: HostIdx, recvIdx: HostIdx, sentKey: Key, value: Value)
+    requires Inv(c, v)
+    requires Next(c, v, v')
+    requires c.ValidHost(sendIdx)
+    requires c.ValidHost(recvIdx)
+    requires Transfer(c, v, v', sendIdx, recvIdx, sentKey, value)
+    ensures Inv(c, v')
+    ensures MapSpec.Next(Abstraction(c, v), Abstraction(c, v'))
+  {
+  }
 
   lemma NextPreservesInvAndRefines(c: Constants, v: Variables, v': Variables)
     requires Inv(c, v)
