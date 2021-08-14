@@ -6,7 +6,8 @@
 
 include "model_for_ex03.dfy"
 
-module Proof {
+module TwoPCInvariantProof {
+  import opened CommitTypes
   import opened Types
   import opened Library
   import opened DistributedSystem
@@ -14,7 +15,7 @@ module Proof {
 
 //#start-elide
   predicate VoteMessagesAgreeWithParticipantPreferences(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     (forall msg |
       && msg in v.network.sentMsgs
@@ -25,7 +26,7 @@ module Proof {
   }
 
   predicate CoordinatorStateSupportedByVote(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     (forall idx:HostId |
       && ValidParticipantId(c, idx)
@@ -36,7 +37,7 @@ module Proof {
 
 //#end-elide
   predicate DecisionMsgsAgreeWithDecision(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     (forall msg |
       && msg in v.network.sentMsgs
@@ -47,7 +48,7 @@ module Proof {
 
   predicate Inv(c: Constants, v: Variables)
   {
-    && Host.GroupWF(c.hosts, v.hosts)
+    && v.WF(c)
 //#start-elide
     && VoteMessagesAgreeWithParticipantPreferences(c, v)
     && CoordinatorStateSupportedByVote(c, v)

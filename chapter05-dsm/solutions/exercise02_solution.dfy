@@ -20,9 +20,13 @@
 // Note that we include the result of exercise01. If you have doubts about the
 // model you built there, please contact an instructor for a correct solution
 // to build on for this exercise.
-include "exercise01.dfy"
+//#exerciseinclude "exercise01.dfy"
+//#start-elide
+include "exercise01_solution.dfy"
+//#end-elide
 
 module Obligations {
+  import opened CommitTypes
   import opened Types
   import opened Library
   import opened DistributedSystem
@@ -31,13 +35,13 @@ module Obligations {
   // Here are some handy accessor functions for dereferencing the coordinator
   // and the participants out of the sequence in Hosts.
   function CoordinatorConstants(c: Constants) : CoordinatorHost.Constants
-    requires Host.GroupWFConstants(c.hosts)
+    requires c.WF()
   {
     Last(c.hosts).coordinator
   }
 
   function CoordinatorVars(c: Constants, v: Variables) : CoordinatorHost.Variables
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     Last(v.hosts).coordinator
   }
@@ -48,21 +52,21 @@ module Obligations {
   }
 
   function ParticipantConstants(c: Constants, hostid: HostId) : ParticipantHost.Constants
-    requires Host.GroupWFConstants(c.hosts)
+    requires c.WF()
     requires ValidParticipantId(c, hostid)
   {
     c.hosts[hostid].participant
   }
 
   function ParticipantVars(c: Constants, v: Variables, hostid: HostId) : ParticipantHost.Variables
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
     requires ValidParticipantId(c, hostid)
   {
     v.hosts[hostid].participant
   }
 
   predicate AllWithDecisionAgreeWithThisOne(c: Constants, v: Variables, decision: Decision)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
     // I pulled this conjunction into a named predicate because Dafny warned of
     // no trigger for the exists.
   {
@@ -75,7 +79,7 @@ module Obligations {
 //#end-elide
   // AC-1: All processes that reach a decision reach the same one.
   predicate SafetyAC1(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     // All hosts that reach a decision reach the same one
 //#exercise    false // Replace me
@@ -89,7 +93,7 @@ module Obligations {
 
   // AC-3: The Commit decision can only be reached if all processes prefer Yes.
   predicate SafetyAC3(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
 //#exercise    false // Replace me
 //#start-elide
@@ -101,7 +105,7 @@ module Obligations {
 
   // AC-4: If all processes prefer Yes, then the decision must be Commit.
   predicate SafetyAC4(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
 //#exercise    false // Replace me
 //#start-elide
@@ -115,7 +119,7 @@ module Obligations {
 
   //#instructor Player 1
   predicate Safety(c: Constants, v: Variables)
-    requires Host.GroupWF(c.hosts, v.hosts)
+    requires v.WF(c)
   {
     && SafetyAC1(c, v)
     && SafetyAC3(c, v)

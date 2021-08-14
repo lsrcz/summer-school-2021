@@ -27,21 +27,18 @@
  */
 
 include "../../library/Library.dfy"
-
-module Types {
-  type ParticipantId = nat
-
-  // How a particular participant feels.
-  datatype Vote = Yes | No
-  // What decision has been reached by the protocol.
-  datatype Decision = Commit | Abort
-}
+//#inline "../../chapter05-dsm/solutions/elide-types.dfy"
+//#start-elide
+include "../../chapter05-dsm/solutions/elide-types.dfy"
+//#end-elide
 
 // This is the specification state machine. It defines what the implementation
 // is trying to accomplish, while ignoring all implementation details.
 module AtomicCommit {
-  import opened Types
+  import opened CommitTypes
   import opened Library
+
+  type ParticipantId = nat
 
   // We'll give you the state data structure; it'll be your job to define the
   // actions.  The input preferences are constant, so we record them here.

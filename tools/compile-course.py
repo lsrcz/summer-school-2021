@@ -63,17 +63,17 @@ class Element:
   def exercise_path(self):
     return os.path.join(student_dir, self.exercise_rel_path)
 
-  def inline(self, line):
+  def inline(self, including_path, line):
     mo = re.compile('\S+\s+"(\S+)"').search(line)
     assert mo
     inlinefile = mo.groups()[0]
-    inlinepath = os.path.join(instructor_dir, self.chapter, self.type, inlinefile)
+    inlinepath = os.path.join(os.path.dirname(including_path), inlinefile)
     lines = [line.rstrip() for line in open(inlinepath).readlines()]
     output_lines = []
     for line in lines:
       if line.startswith("include") and not "library" in line:
             # what a hackaroo
-        output_lines += self.inline(line)
+        output_lines += self.inline(inlinepath, line)
       elif line.startswith("//#"):
         pass
       else:
@@ -100,10 +100,11 @@ class Element:
         elide = True
         output_line = None
       elif input_line.startswith("//#end-elide"):
+        assert elide    # mismatched start-end elide
         elide = False
         output_line = None
       elif input_line.startswith("//#inline"):
-        output_lines += self.inline(input_line)
+        output_lines += self.inline(self.instructor_path(), input_line)
         elide = False
         output_line = None
       elif elide:
@@ -163,7 +164,11 @@ class Catalog:
     for chapter in sorted(self.elements.keys()):
       for type in sorted(self.elements[chapter].keys()):
         for element in sorted(self.elements[chapter][type]):
-          fun(element)
+          try:
+            fun(element)
+          except:
+            print(f"While processing {element}:")
+            raise
 
   def clean_output(self):
     # Destroy existing data

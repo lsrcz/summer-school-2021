@@ -1,4 +1,4 @@
-//#title Property for Atomic Commit
+//#title Property Lemmas for Atomic Commit
 //#desc The state machine model captures AC2 nicely,
 //#desc but let's make it very clear that the model also obeys
 //#desc AC1, AC3 and AC4.
@@ -36,7 +36,7 @@ include "exercise02_solution.dfy"
 // We don't state AC5 because it's a liveness property, which is out of scope
 // for this course.
 module AtomicCommitProperties {
-  import opened Types
+  import opened CommitTypes
   import opened AtomicCommit
 
   // Defining this predicate makes the definitions of the AC properties
