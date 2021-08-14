@@ -1,24 +1,24 @@
 //#title FindMax
 //#desc Loop invariants.
 
-method FindMax(intary:array<int>) returns (maxIndex:nat)
-    requires intary.Length > 0
-    ensures maxIndex<intary.Length
-    ensures forall idx:nat | idx<intary.Length :: intary[idx] <= intary[maxIndex]
+method FindMax(intSeq:seq<int>) returns (maxIndex:nat)
+    requires |intSeq| > 0
+    ensures maxIndex<|intSeq|
+    ensures forall idx:nat | idx<|intSeq| :: intSeq[idx] <= intSeq[maxIndex]
 {
     var idx:nat := 0;
     maxIndex := 0;
-    while(idx < intary.Length)
+    while(idx < |intSeq|)
 //#exercise        invariant true
 //#exercise        invariant true
 //#exercise        invariant true
 //#start-elide
-        invariant idx <= intary.Length
-        invariant maxIndex < intary.Length
-        invariant forall prioridx:nat | prioridx<idx :: intary[prioridx] <= intary[maxIndex]
+        invariant idx <= |intSeq|
+        invariant maxIndex < |intSeq|
+        invariant forall prioridx:nat | prioridx<idx :: intSeq[prioridx] <= intSeq[maxIndex]
 //#end-elide
     {
-        if(intary[maxIndex] < intary[idx]) {
+        if(intSeq[maxIndex] < intSeq[idx]) {
             maxIndex := idx;
         }
         idx := idx+1;
