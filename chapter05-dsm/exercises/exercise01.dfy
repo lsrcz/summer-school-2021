@@ -19,6 +19,12 @@
  * This file provides a lot of helpful framework. You only need to
  * define Types.Message and then fill in the state machine types and actions
  * in module CoordinatorHost and module ParticipantHost.
+ *
+ * Unlike chapter01, where you could work exercises sequentially,
+ * WE STRONGLY ENCOURAGE YOU to read the entire file before beginning
+ * work. Later pieces of the file are helpful, for example by explaining
+ * the network model you're working in, and by helping you understand
+ * the role the Constants datatypes play.
  */
 
 include "../../library/Library.dfy" // Some handy utilities.
