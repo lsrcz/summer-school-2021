@@ -52,7 +52,7 @@
 
 ## chapter02-spec
 
-- [`chapter02-spec/exercises/exercise01.dfy`](chapter02-spec/exercises/exercise01.dfy)<br>**IsPrime I** -- Basic specification
+- [`chapter02-spec/exercises/exercise01.dfy`](chapter02-spec/exercises/exercise01.dfy)<br>**IsPrime I** -- Basic specification.
 
 - [`chapter02-spec/exercises/exercise02.dfy`](chapter02-spec/exercises/exercise02.dfy)<br>**IsPrime II** -- Working with an implementation proof
 
