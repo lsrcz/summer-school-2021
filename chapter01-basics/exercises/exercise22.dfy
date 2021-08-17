@@ -41,5 +41,5 @@ lemma SortedTreeMeansSortedSequence(tree:Tree)
 method CheckIfSortedTree(tree:Tree) returns (sorted:bool)
     ensures sorted <==> IsSortedTree(tree)
 {
-    return false;
+    return false;  // Implement this method. Feel free to make this a recursive method.
 }
