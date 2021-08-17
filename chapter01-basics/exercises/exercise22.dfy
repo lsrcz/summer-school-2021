@@ -7,7 +7,7 @@
 // A binary tree is a tree data structure in which each node has a value and at
 // most two children, which are referred to as the left child and the right child.
 
-datatype Tree = Tree // you should define your Tree datatype here
+datatype Tree = Leaf(v:int) | Node(v:int, l:Tree, r:Tree)
 
 // You will find the following function method useful. It is meant to express
 // the given tree as a sequence.
@@ -17,11 +17,13 @@ datatype Tree = Tree // you should define your Tree datatype here
 
 function method TreeAsSequence(tree:Tree) : seq<int>
 {
-    [] // Replace me
+    match tree
+      case Leaf(v) => [v]
+      case Node(v, l, r) => TreeAsSequence(l) + [v] + TreeAsSequence(r)
 }
 
 predicate IsSortedTree(tree:Tree) {
-    true // Replace me
+    SequenceIsSorted(TreeAsSequence(tree))
 }
 
 // You may find it useful to relate your recursive definition of IsSortedTree to
@@ -40,5 +42,19 @@ lemma SortedTreeMeansSortedSequence(tree:Tree)
 method CheckIfSortedTree(tree:Tree) returns (sorted:bool)
     ensures sorted <==> IsSortedTree(tree)
 {
-    return false;
+    var s := TreeAsSequence(tree);
+    var i := 0;
+    sorted := true;
+    while (i < |s|) 
+        invariant i <= |s|
+        invariant sorted <==> SequenceIsSorted(s[0..i])
+    {
+        if (i != 0) {
+            if (s[i-1]>s[i]) {
+                sorted := false;
+            }
+        }
+        i := i + 1;
+    }
+    return sorted;
 }

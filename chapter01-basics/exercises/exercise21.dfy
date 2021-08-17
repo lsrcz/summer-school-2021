@@ -11,11 +11,26 @@ predicate IsSorted(seqint:seq<int>) {
 
 method BinarySearch(haystack:seq<int>, needle:int) returns (index:nat)
     requires IsSorted(haystack)
-    ensures false // real spec should go here
-    ensures false // real spec should go here
-    ensures false // real spec should go here
+    ensures 0<=index<=|haystack|
+    ensures forall i:int | 0<=i<index :: haystack[i] < needle// real spec should go here
+    ensures forall i:int | index<=i<|haystack| :: haystack[i]>=needle // real spec should go here
 {
-    return 0;  // Replace me with an implementation.
+    if (|haystack|==0) {
+        return 0;
+    } else {
+        var mid := |haystack| / 2;
+        var sl := haystack[..mid];
+        var sr := haystack[mid+1..];
+
+        if (haystack[mid] >= needle) {
+            index := BinarySearch(sl, needle);
+            return index;
+        } else {
+            var r1 := BinarySearch(sr, needle);
+            index := r1 + mid + 1;
+            return index;
+        }
+    }
 }
 
 // The test method below helps you confirm that you wrote a meaningful specification

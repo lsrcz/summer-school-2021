@@ -11,7 +11,7 @@ lemma SetComprehension()
   // Read it as "the set of values x such that (|) x is between 0 and 10 and is even."
   // (In general, it's "the set of value x such that predicate P(x) is true".)
   var modestEvens := set x | 0 <= x < 10 && IsEven(x);
-  assert modestEvens == {0,2,4,8};
+  assert modestEvens == {0,2,4,6,8};
 }
 
 lemma Maps()
@@ -24,7 +24,7 @@ lemma Maps()
   var replaceMap := doubleMap[3 := 7];
   assert replaceMap[1] == 2;
   assert replaceMap[2] == 4;
-  assert replaceMap[3] == 6;
+  assert replaceMap[3] == 7;
 }
 
 lemma MapComprehension()
@@ -35,7 +35,7 @@ lemma MapComprehension()
   // This map is type-inferred to be map<int,int>.
   var doublyMap := map x | 0<=x<5 :: 2*x;
   assert doublyMap[1] == 2;
-  assert doublyMap[4] == 4;
+  assert doublyMap[4] == 8;
 }
 
 lemma SeqComprehension()
@@ -53,5 +53,5 @@ lemma SeqComprehension()
   // expression i*2 works on all integers), but it's quite often necessary.
   var evensInOrder := seq(5, i requires 0<=i<5 => i*2);
   assert evensInOrder[2] == 4;
-  assert evensInOrder == [8,6,4,2,0];
+  assert evensInOrder == [0,2,4,6,8];
 }

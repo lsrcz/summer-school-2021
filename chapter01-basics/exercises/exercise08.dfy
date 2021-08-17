@@ -9,6 +9,6 @@ type SeqOfSets = seq<set<int>>
 lemma TryATypeSynonym()
 {
   var seqOfSets:SeqOfSets := [{0}, {0,1}, {0,1,2}];
-  assert 1 in seqOfSets[0];
+  assert 1 in seqOfSets[1];
 }
 

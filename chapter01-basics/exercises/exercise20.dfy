@@ -9,6 +9,19 @@ predicate IsSorted(intseq:seq<int>) {
 method IsArraySorted(intSeq:seq<int>) returns (issorted:bool)
     ensures issorted <==> IsSorted(intSeq[..])
 {
-    return true;
+    var i := 0;
+    issorted := true;
+    while (i < |intSeq|) 
+        invariant i <= |intSeq|
+        invariant issorted <==> IsSorted(intSeq[0..i])
+    {
+        if (i != 0) {
+            if (intSeq[i-1]>intSeq[i]) {
+                issorted := false;
+            }
+        }
+        i := i + 1;
+    }
+    return issorted;
 }
 

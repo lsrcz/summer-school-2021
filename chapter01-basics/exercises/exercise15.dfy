@@ -11,6 +11,7 @@ predicate IsModest(x:int) {
 
 // Let's do the same thing we did in the previous example, but hide the range
 // constraint in a predicate IsModest.
+/*
 lemma IsThisSetFinite()
 {
   // Now we get:
@@ -19,6 +20,7 @@ lemma IsThisSetFinite()
   var modestEvens := set x | IsModest(x) && IsEven(x);
   assert modestEvens == {0,2,4,6,8};
 }
+*/
 
 // Comment out the preceding lemma so we can proceed.
 

@@ -14,9 +14,9 @@ lemma TryOutSomeSetLiterals()
   assert HasSevenAndNotNine({7});
 
   // None of these asserions are correct. Try them. Replace them with one that is.
-  assert HasSevenAndNotNine({});
-  assert HasSevenAndNotNine({7,9});
-  assert HasSevenAndNotNine({1,3,5,7,8,9,10});
+  assert HasSevenAndNotNine({7});
+  assert HasSevenAndNotNine({7});
+  assert HasSevenAndNotNine({1,3,5,7,8,10});
 }
 
 

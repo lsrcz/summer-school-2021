@@ -22,7 +22,7 @@ lemma ExplainEvenNumbers(x:int) returns (twocount:int)
   ensures twocount*2 == x
 {
   // return twocount by assigning it.
-  twocount := x/3;
+  twocount := x/2;
 }
 
 predicate AlternateEven(x:int)

@@ -12,5 +12,6 @@ method FindInBinaryTree(tree:Tree, needle:int) returns (issorted:bool)
     requires IsSortedTree(tree)
     ensures issorted <==> needle in TreeAsSequence(tree)
 {
-    return true;
+    var s := TreeAsSequence(tree);
+    return needle in s;
 }

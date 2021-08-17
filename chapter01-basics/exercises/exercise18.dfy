@@ -3,7 +3,12 @@
 
 function method fibo(val:nat) : nat
 {
-  0
+  if (val == 0) then 
+    0
+  else if (val == 1) then
+    1
+  else
+    fibo(val - 1) + fibo(val - 2)
 }
 
 lemma Check()
