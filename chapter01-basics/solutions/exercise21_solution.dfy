@@ -10,7 +10,7 @@ predicate IsSorted(seqint:seq<int>) {
 // (If the needle is present, this should be the index of the needle)
 
 method BinsqSearch(haystack:seq<int>, needle:int) returns (index:nat)
-    requires IsSorted(haystack[..])
+    requires IsSorted(haystack)
 //#exercise    ensures false // real spec should go here
 //#exercise    ensures false // real spec should go here
 //#exercise    ensures false // real spec should go here
@@ -20,7 +20,7 @@ method BinsqSearch(haystack:seq<int>, needle:int) returns (index:nat)
     ensures forall i:nat | index<=i<|haystack| :: needle <= haystack[i]
 //#end-elide
 {
-//#exercise    return 0; 
+//#exercise    return 0;  // Replace me with an implementation.
 //#start-elide
     var low:nat := 0;
     var high:nat := |haystack|;

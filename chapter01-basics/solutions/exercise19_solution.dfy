@@ -6,21 +6,21 @@ method FindMax(intSeq:seq<int>) returns (maxIndex:nat)
     ensures maxIndex<|intSeq|
     ensures forall idx:nat | idx<|intSeq| :: intSeq[idx] <= intSeq[maxIndex]
 {
-    var idx:nat := 0;
+    var count:nat := 0;
     maxIndex := 0;
-    while(idx < |intSeq|)
+    while(count < |intSeq|)
 //#exercise        invariant true
 //#exercise        invariant true
 //#exercise        invariant true
 //#start-elide
-        invariant idx <= |intSeq|
+        invariant count <= |intSeq|
         invariant maxIndex < |intSeq|
-        invariant forall prioridx:nat | prioridx<idx :: intSeq[prioridx] <= intSeq[maxIndex]
+        invariant forall prioridx:nat | prioridx<count :: intSeq[prioridx] <= intSeq[maxIndex]
 //#end-elide
     {
-        if(intSeq[maxIndex] < intSeq[idx]) {
-            maxIndex := idx;
+        if(intSeq[maxIndex] < intSeq[count]) {
+            maxIndex := count;
         }
-        idx := idx+1;
+        count := count+1;
     }
 }
