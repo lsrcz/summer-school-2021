@@ -28,7 +28,13 @@
  */
 
 include "../../library/Library.dfy"
-include "../../chapter05-dsm/solutions/elide-types.dfy"
+module CommitTypes {
+  // How a particular participant feels.
+  datatype Vote = Yes | No
+  // What decision has been reached by the protocol.
+  datatype Decision = Commit | Abort
+}
+
 
 // This is the specification state machine. It defines what the implementation
 // is trying to accomplish, while ignoring all implementation details.
