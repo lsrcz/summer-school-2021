@@ -28,8 +28,6 @@
  */
 
 include "../../library/Library.dfy" // Some handy utilities.
-// Elided from student dir; simply directly-included into solutions
-// and given models
 module CommitTypes {
   // How a particular participant feels.
   datatype Vote = Yes | No
