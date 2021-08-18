@@ -24,15 +24,15 @@ simultaneously.
 datatype Constants = Constants(/* You define this ...*/)
 datatype Variables = Variables(/* You define this ...*/)
 
-predicate Init(v:Variables) {
+predicate Init(c:Constants, v:Variables) {
   true  // Replace me
 }
 
-predicate Next(v:Variables, v':Variables) {
+predicate Next(c:Constants, v:Variables, v':Variables) {
   true  // Replace me
 }
 
-predicate Safety(v:Variables) {
+predicate Safety(c:Constants, v:Variables) {
   // What's a good definition of safety for the lock server? No two clients
   // have the lock simultaneously. Write that here.
   false
