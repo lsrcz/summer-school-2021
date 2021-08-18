@@ -4,7 +4,7 @@
 
 predicate IsPrime(candidate:nat)
 {
-  && false // Replace me
+  candidate >= 2 && forall x:nat | 2 <= x < candidate && IsPrime(x) :: candidate % x != 0
 }
 
 method Main()
