@@ -5,6 +5,7 @@
 // impossible to prove. In fact, you can reuse parts of the instructor-supplied
 // proof from here as well.
 //
+//#extratopsecrethackmarkforelision "elide-types.dfy"
 
 // TODO(manos): how should we ensure this file is disseminated at the
 // appropriate time, so students aren't waiting for it?
@@ -59,7 +60,6 @@
  */
 
 include "../../library/Library.dfy" // Some handy utilities.
-include "elide-types.dfy"
 
 module Types {
   import opened Library

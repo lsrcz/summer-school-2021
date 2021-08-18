@@ -1,8 +1,10 @@
 //#title IsPrime I
-//#desc Basic specification
+//#desc Basic specification.
+// Implement a predicate that tells whether a natural number is prime.
 
 predicate IsPrime(candidate:nat)
 {
+  && false // Replace me
 }
 
 method Main()

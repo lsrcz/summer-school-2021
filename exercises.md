@@ -38,7 +38,7 @@
 
 - [`chapter01-basics/exercises/exercise19.dfy`](chapter01-basics/exercises/exercise19.dfy)<br>**FindMax** -- Loop invariants.
 
-- [`chapter01-basics/exercises/exercise20.dfy`](chapter01-basics/exercises/exercise20.dfy)<br>**IsArraySorted** -- Build an entire imperative loop method implementation with loop invariants.
+- [`chapter01-basics/exercises/exercise20.dfy`](chapter01-basics/exercises/exercise20.dfy)<br>**IsSeqSorted** -- Build an entire imperative loop method implementation with loop invariants.
 
 - [`chapter01-basics/exercises/exercise21.dfy`](chapter01-basics/exercises/exercise21.dfy)<br>**Binary Search** -- Method implementation; writing a Hoare spec.
 
@@ -52,7 +52,7 @@
 
 ## chapter02-spec
 
-- [`chapter02-spec/exercises/exercise01.dfy`](chapter02-spec/exercises/exercise01.dfy)<br>**IsPrime I** -- Basic specification
+- [`chapter02-spec/exercises/exercise01.dfy`](chapter02-spec/exercises/exercise01.dfy)<br>**IsPrime I** -- Basic specification.
 
 - [`chapter02-spec/exercises/exercise02.dfy`](chapter02-spec/exercises/exercise02.dfy)<br>**IsPrime II** -- Working with an implementation proof
 

@@ -4,7 +4,7 @@
 
 // Define a Binary Tree and write a method to check if it is sorted
 
-// A binary tree is a tree data structure in which each node has a value and at
+// A binary tree is a tree data structure in which each (internal) node has a value and at
 // most two children, which are referred to as the left child and the right child.
 
 datatype Tree = Leaf(v:int) | Node(v:int, l:Tree, r:Tree)
@@ -22,6 +22,7 @@ function method TreeAsSequence(tree:Tree) : seq<int>
       case Node(v, l, r) => TreeAsSequence(l) + [v] + TreeAsSequence(r)
 }
 
+// Note: Don't use SequenceIsSorted in your definition of IsSortedTree.
 predicate IsSortedTree(tree:Tree) {
     SequenceIsSorted(TreeAsSequence(tree))
 }
@@ -39,6 +40,10 @@ lemma SortedTreeMeansSortedSequence(tree:Tree)
 {
 }
 
+// Write a recursive implementation that checks if a tree
+// is sorted by checking the children, then using TreeAsSequence
+// on the children to confirm that both children stay on their
+// respective sides of the pivot.
 method CheckIfSortedTree(tree:Tree) returns (sorted:bool)
     ensures sorted <==> IsSortedTree(tree)
 {
