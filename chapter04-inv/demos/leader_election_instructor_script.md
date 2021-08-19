@@ -64,9 +64,9 @@ Cheat sheet:
     else i<end || start<i
   }
 
-  predicate IsChord(k: Constants, v: Variables, start: nat, end: nat)
+  predicate IsChord(c: Constants, v: Variables, start: nat, end: nat)
   {
-    && k.WF()
+    && c.WF()
     && v.WF(k)
     && k.ValidIdx(start)
     && k.ValidIdx(end)
@@ -168,42 +168,42 @@ FIX Type out IsChord, OnChordHeardDominatesId.
 
 Cheat sheet:
 ```
-  predicate Between(start: nat, i: nat, end: nat)
+  predicate Between(start: nat, nodeidx: nat, end: nat)
   {
     if start<end
-    then start<i<end
-    else i<end || start<i
+    then start<nodeidx<end
+    else nodeidx<end || start<nodeidx
   }
 
-  predicate IsChord(k: Constants, v: Variables, start: nat, end: nat)
+  predicate IsChord(c: Constants, v: Variables, start: nat, end: nat)
   {
-    && k.WF()
-    && v.WF(k)
-    && k.ValidIdx(start)
-    && k.ValidIdx(end)
-    && k.ids[start] == v.highest_heard[end]
+//delete    && c.WF()
+    && v.WF(c)
+//delete    && c.ValidIdx(start)
+//delete    && c.ValidIdx(end)
+    && c.ids[start] == v.highest_heard[end]
   }
 
-  predicate OnChordHeardDominatesId(k: Constants, v: Variables, start: nat, end: nat)
-    requires k.WF()
-    requires v.WF(k)
+  predicate OnChordHeardDominatesId(c: Constants, v: Variables, start: nat, end: nat)
+    requires c.WF()
+    requires v.WF(c)
   {
-    forall i:nat | k.ValidIdx(i) && Between(start, i, end) :: v.highest_heard[i] > k.ids[i]
+    forall nodeidx:nat | c.ValidIdx(nodeidx) && Between(start, nodeidx, end) :: v.highest_heard[nodeidx] > c.ids[nodeidx]
   }
 
-  predicate OnChordHeardDominatesIdInv(k: Constants, v: Variables)
-    requires k.WF()
-    requires v.WF(k)
+  predicate OnChordHeardDominatesIdInv(c: Constants, v: Variables)
+    requires c.WF()
+    requires v.WF(c)
   {
-    forall start:nat, end:nat | k.ValidIdx(start) && k.ValidIdx(end) && IsChord(k, v, start, end) :: OnChordHeardDominatesId(k, v, start, end)
+    forall start:nat, end:nat | c.ValidIdx(start) && c.ValidIdx(end) && IsChord(c, v, start, end) :: OnChordHeardDominatesId(c, v, start, end)
   }
 ```
 
 Proof sketch:
 If we are gonna violate Safety, we'll need two idxes i, j that are both the
-leader. WOLOG let i be the one with the larger id. It is leader, so IsChord(k,v,i,i).
-So every *other* node, including j is Between(k, i, j, i), so
-v.highest_heard[j] > k.ids[j], which is a contradiction with IsLeader(j).
+leader. WOLOG let i be the one with the larger id. It is leader, so IsChord(c,v,i,i).
+So every *other* node, including j is Between(c, i, j, i), so
+v.highest_heard[j] > c.ids[j], which is a contradiction with IsLeader(j).
 
 ...need to define Between.
   - why exclusive?
@@ -220,14 +220,14 @@ v.highest_heard[j] > k.ids[j], which is a contradiction with IsLeader(j).
 
 * split dst==end on 
         if v'.highest_heard[dst] == v.highest_heard[dst] {
-        } else if v'.highest_heard[dst] == k.ids[src] {
+        } else if v'.highest_heard[dst] == c.ids[src] {
         } else {
           assert v'.highest_heard[dst] == v.highest_heard[src];
         }
         ...fails middle branch
 
 * middle branch:
-          assert k.ids[src] > v.highest_heard[dst];
+          assert c.ids[src] > v.highest_heard[dst];
 
   WHAT? Assert some true stuff
           assert v'.highest_heard[dst] == dst_new_max;
@@ -239,14 +239,14 @@ v.highest_heard[j] > k.ids[j], which is a contradiction with IsLeader(j).
   look at defn.
   FIX dst_new_max
 
-* okay, still on dst==end and v'.highest_heard[dst] == k.ids[src]
+* okay, still on dst==end and v'.highest_heard[dst] == c.ids[src]
   In this case, we have a little chord from src->dst, but also a chord
   from start->dst.
-  So k.ids[src] == k.ids[start];
+  So c.ids[src] == c.ids[start];
   That's fine if src==start, but that would exclude
   Between(start, i, dst).
   So src!=start.
-  assert k.UniqueIds()!
+  assert c.UniqueIds()!
   FIX UniqueIds.
 
 

@@ -16,17 +16,16 @@ datatype Constants = Constants(ids: seq<nat>) {
 // The highest other identifier this node has heard about.
 datatype Variables = Variables(highest_heard: seq<nat>) {
   predicate WF(c: Constants)
-    requires c.WF()
   {
+    && c.WF()
     && |highest_heard| == |c.ids|
   }
 }
 
 predicate Init(c: Constants, v: Variables)
 {
-  && c.WF()
-  && c.UniqueIds()
   && v.WF(c)
+  && c.UniqueIds()
     // Everyone begins having heard about nobody, not even themselves.
   && (forall i | c.ValidIdx(i) :: v.highest_heard[i] == -1)
 }
@@ -44,7 +43,6 @@ function NextIdx(c: Constants, idx: nat) : nat
 
 predicate Transmission(c: Constants, v: Variables, v': Variables, src: nat)
 {
-  && c.WF()
   && v.WF(c)
   && v'.WF(c)
   && c.ValidIdx(src)
@@ -81,7 +79,6 @@ predicate Next(c: Constants, v: Variables, v': Variables)
 //////////////////////////////////////////////////////////////////////////////
 
 predicate IsLeader(c: Constants, v: Variables, i: nat)
-  requires c.WF()
   requires v.WF(c)
 {
   && c.ValidIdx(i)
@@ -89,7 +86,6 @@ predicate IsLeader(c: Constants, v: Variables, i: nat)
 }
 
 predicate Safety(c: Constants, v: Variables)
-  requires c.WF()
   requires v.WF(c)
 {
   forall i, j | IsLeader(c, v, i) && IsLeader(c, v, j) :: i == j
@@ -101,7 +97,6 @@ predicate Safety(c: Constants, v: Variables)
 
 predicate Inv(c: Constants, v: Variables)
 {
-  && c.WF()
   && v.WF(c)
   && Safety(c, v)
 }
