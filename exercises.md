@@ -98,5 +98,3 @@
 
 ## chapter07
 
-- [`chapter07/exercises/exercise01.dfy`](chapter07/exercises/exercise01.dfy)<br>**Synchronous KV Store With Application Correspondence** -- Build a refinement from a protocol (distributed sharded state) to a specification (a logically-centralized abstract map). TODO Conform to 2PC abstract proof obligation structure.
-
