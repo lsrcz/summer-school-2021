@@ -21,15 +21,28 @@ The safety property is that no two clients ever hold the lock
 simultaneously.
 */
 
-datatype Constants = Constants(/* You define this ...*/)
-datatype Variables = Variables(/* You define this ...*/)
+datatype Constants = Constants(/* You define this ...*/) {
+  predicate WF() { true }
+}
+datatype Variables = Variables(/* You define this ...*/) {
+  predicate WF(c: Constants) { true }
+}
 
 predicate Init(c:Constants, v:Variables) {
-  true  // Replace me
+  && v.WF(c)
+  && true  // Replace me
+}
+
+datatype Step =
+  | SomeStep(somearg: int)   // Replace me
+
+predicate NextStep(c:Constants, v:Variables, v':Variables, step: Step) {
+  match step
+  case SomeStep(somearg) => false  // Replace me
 }
 
 predicate Next(c:Constants, v:Variables, v':Variables) {
-  true  // Replace me
+  exists step :: NextStep(c, v, v', step)
 }
 
 predicate Safety(c:Constants, v:Variables) {
