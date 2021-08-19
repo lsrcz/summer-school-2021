@@ -24,7 +24,13 @@ function method TreeAsSequence(tree:Tree) : seq<int>
 
 // Note: Don't use SequenceIsSorted in your definition of IsSortedTree.
 predicate IsSortedTree(tree:Tree) {
-    SequenceIsSorted(TreeAsSequence(tree))
+    match tree
+        case Leaf(v) => true
+        case Node(v, l, r) =>
+            && (forall j | 0 <= j < |TreeAsSequence(l)| :: TreeAsSequence(l)[j] <= v)
+            && (forall j | 0 <= j < |TreeAsSequence(r)| :: TreeAsSequence(r)[j] >= v)
+            && IsSortedTree(l)
+            && IsSortedTree(r)
 }
 
 // You may find it useful to relate your recursive definition of IsSortedTree to
@@ -47,19 +53,22 @@ lemma SortedTreeMeansSortedSequence(tree:Tree)
 method CheckIfSortedTree(tree:Tree) returns (sorted:bool)
     ensures sorted <==> IsSortedTree(tree)
 {
-    var s := TreeAsSequence(tree);
-    var i := 0;
-    sorted := true;
-    while (i < |s|) 
-        invariant i <= |s|
-        invariant sorted <==> SequenceIsSorted(s[0..i])
-    {
-        if (i != 0) {
-            if (s[i-1]>s[i]) {
-                sorted := false;
+    match tree
+        case Leaf(v) => return true;
+        case Node(v, l, r) => {
+            var leftchecked := CheckIfSortedTree(l);
+            var rightchecked := CheckIfSortedTree(r);
+            if (leftchecked && rightchecked) {
+                var leftSeq := TreeAsSequence(l);
+                var rightSeq := TreeAsSequence(r);
+                var leftpivot1 := |leftSeq| == 0 || leftSeq[|leftSeq| - 1] <= v;
+                var rightpivot1 := |rightSeq| == 0 || rightSeq[0] >= v;
+                SortedTreeMeansSortedSequence(l);
+                SortedTreeMeansSortedSequence(r);
+                return leftpivot1 && rightpivot1;
+            } else {
+                return false;
             }
+
         }
-        i := i + 1;
-    }
-    return sorted;
 }
