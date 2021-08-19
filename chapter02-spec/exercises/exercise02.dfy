@@ -27,7 +27,6 @@ method test_prime(candidate:nat) returns (result:bool)
   requires 1<candidate
   ensures result == IsPrime(candidate)
 {
-  if (1 < candidate) {
     var factor := 2;
 
     while (factor < candidate)
@@ -41,9 +40,6 @@ method test_prime(candidate:nat) returns (result:bool)
     }
     assert IsPrime(candidate);
     return true;
-  } else {
-    result := false;
-  }
 }
 
 method Main()
