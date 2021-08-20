@@ -11,16 +11,18 @@ datatype Constants = Constants(capacity:int)
 datatype CokeMachine = CokeMachine(numCokes:int)
 
 predicate Init(c:Constants, v:CokeMachine) {
-    true // Replace me
+    c.capacity == 7 && v.numCokes == 0
 }
 
 predicate Purchase(c:Constants, v:CokeMachine, v':CokeMachine) {
-    true // Replace me
+    && v.numCokes > 0
+    && v'.numCokes == v.numCokes - 1
 }
 
 predicate Restock(c:Constants, v:CokeMachine, v':CokeMachine, numRestock:int)
 {
-    true // Replace me
+    && 0 <= v.numCokes + numRestock <= c.capacity
+    && v'.numCokes == v.numCokes + numRestock
 }
 
 predicate Next(c:Constants, v:CokeMachine, v':CokeMachine) {
