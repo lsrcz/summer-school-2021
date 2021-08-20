@@ -50,16 +50,17 @@ predicate Init(c:Constants, v:Variables) {
 
 predicate Lock(c: Constants, v: Variables, v': Variables, client: nat) {
   && v.WF(c)
+  && 0 <= client < |v.clientState|
   && Unlocked(c, v)
-  && |v.clientState| == |v'.clientState|
-  && AcquiredBy(c, v', client)
+  && v'.serverState == LockedBy(client)
+  && v'.clientState == v.clientState[client := Client(true)]
 }
 
 predicate Release(c: Constants, v: Variables, v': Variables, client: nat) {
   && v.WF(c)
   && AcquiredBy(c, v, client)
-  && |v.clientState| == |v'.clientState|
-  && Unlocked(c, v')
+  && v'.serverState.Unlocked?
+  && v'.clientState == v.clientState[client := Client(false)]
 }
 
 datatype Step =
