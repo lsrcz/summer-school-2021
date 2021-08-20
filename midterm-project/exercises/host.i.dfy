@@ -12,7 +12,7 @@ module Host {
   import Network
 
   // Define your Message datatype here.
-datatype Message = Message(/* FILL ME IN! */)
+  datatype Message = Message(/* FILL ME IN! */)
 
   // Define your Host protocol state machine here.
   datatype Constants = Constants(myId:HostId) {
