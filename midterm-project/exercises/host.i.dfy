@@ -20,20 +20,20 @@ datatype Message = Message(/* FILL ME IN! */)
       myId == id
     }
   }
-datatype Variables = Variables(/* FILL ME IN! */)
+  datatype Variables = Variables(/* FILL ME IN! */)
 
   // DistributedSystem tells us our id so we can recognize inbound messages.
   predicate Init(c:Constants, v:Variables) {
-  true // Replace me
+    true // Replace me
   }
 
   // JayNF
   datatype Step =
-  | SomeStep
+    | SomeStep
 
   predicate NextStep(c:Constants, v:Variables, v':Variables, msgOps:Network.MessageOps<Message>, step: Step) {
     match step
-  case SomeStep => true
+       case SomeStep => true
   }
 
   predicate Next(c:Constants, v:Variables, v':Variables, msgOps:Network.MessageOps<Message>) {

@@ -28,7 +28,7 @@ module SafetySpec {
 
   // No two hosts think they hold the lock simulatneously.
   predicate Safety(c:DistributedSystem.Constants, v:DistributedSystem.Variables) {
-  false // Replace this placeholder with an appropriate safety condition: no two clients hold
+    false // Replace this placeholder with an appropriate safety condition: no two clients hold
   }
 }
 
@@ -41,7 +41,7 @@ module Proof {
   // TODO XXX should we give some signatures below as hints?
 
   predicate Inv(c: Constants, v:Variables) {
-  true // Replace this placeholder with an invariant that's inductive and supports Safety.
+    true // Replace this placeholder with an invariant that's inductive and supports Safety.
   }
 
   lemma SafetyProof(c: Constants, v:Variables, v':Variables)
@@ -49,5 +49,6 @@ module Proof {
     ensures Inv(c, v) && Next(c, v, v') ==> Inv(c, v')
     ensures Inv(c, v) ==> Safety(c, v)
   {
+    // Develop any necessary proof here.
   }
 }
