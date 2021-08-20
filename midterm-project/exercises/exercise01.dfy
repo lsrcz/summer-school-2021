@@ -1,5 +1,6 @@
 //#title Midterm Project
-//#desc Build a distributed lock server.
+//#desc Build a distributed lock server. Define your protocol in protocol.i;
+//#desc write your safety spec and proof here.
 
 // This challenge differs from LockServer in two ways. First, there is no
 // central server that coordinates the activity. Second, the hosts can
@@ -21,20 +22,32 @@
 
 include "distributed_system.s.dfy"
 
-// the lock simulatneously.
-predicate Safety(v:DistVars) {
+module SafetySpec {
+  import opened HostIdentifiers
+  import DistributedSystem
+
+  // No two hosts think they hold the lock simulatneously.
+  predicate Safety(c:DistributedSystem.Constants, v:DistributedSystem.Variables) {
   false // Replace this placeholder with an appropriate safety condition: no two clients hold
+  }
 }
 
-// TODO XXX should we give some signatures below as hints?
+module Proof {
+  import opened HostIdentifiers
+  import Host
+  import opened DistributedSystem
+  import opened SafetySpec
 
-predicate Inv(v:DistVars) {
+  // TODO XXX should we give some signatures below as hints?
+
+  predicate Inv(c: Constants, v:Variables) {
   true // Replace this placeholder with an invariant that's inductive and supports Safety.
-}
+  }
 
-lemma SafetyProof()
-  ensures forall v :: DistInit(v) ==> Inv(v)
-  ensures forall v, v' :: Inv(v) && DistNext(v, v') ==> Inv(v')
-  ensures forall v :: Inv(v) ==> Safety(v)
-{
+  lemma SafetyProof(c: Constants, v:Variables, v':Variables)
+    ensures Init(c, v) ==> Inv(c, v)
+    ensures Inv(c, v) && Next(c, v, v') ==> Inv(c, v')
+    ensures Inv(c, v) ==> Safety(c, v)
+  {
+  }
 }
