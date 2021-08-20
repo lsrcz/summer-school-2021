@@ -1,4 +1,5 @@
-// Your protocol: message type, state machine
+//#title Protocol file
+//#desc Define your protocol implementation here: message type, state machine
 
 include "network.s.dfy"
 
@@ -9,7 +10,7 @@ datatype Message = Message(/* FILL ME IN! */)
 datatype HostVars = HostVars(/* FILL ME IN! */)
 
 predicate HostInit(v:HostVars, id:HostId) {
-  true
+  true // Replace me
 }
 
 // The (trusted) DistributedSystem helpfully tells the host what its id is,
@@ -17,5 +18,5 @@ predicate HostInit(v:HostVars, id:HostId) {
 // that id would be a constant part of the hosts' state; here we're trying
 // to keep the boilerplate to a minimum.
 predicate HostNext(id:HostId, v:HostVars, v':HostVars, a:NetAction<Message>) {
-  true
+  true // Replace me
 }
