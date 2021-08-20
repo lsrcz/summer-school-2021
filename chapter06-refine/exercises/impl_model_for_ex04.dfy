@@ -328,7 +328,7 @@ module Host {
   {
     // constants & variables are well-formed (same number of host slots as constants expect)
     && GroupWF(grp_c, grp_v)
-    // Coordinator is inittid to know about the N-1 participants.
+    // Coordinator is initialized to know about the N-1 participants.
     && CoordinatorHost.Init(Last(grp_c).coordinator, Last(grp_v).coordinator)
     // Participants initted with their ids.
     && (forall hostid:HostId | hostid < |grp_c|-1 ::
