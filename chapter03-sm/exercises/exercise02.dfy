@@ -12,7 +12,8 @@
 datatype Constants = Constants(tableSize:nat)
 
 //Use this datatype to define all the relevant state
-datatype Variables = Variables(acquired: seq<bool>)
+datatype Pair = Pair(left: bool, right: bool)
+datatype Variables = Variables(philosophers: seq<Pair>)
 
 // An initial predicate to define well-formed constants.
 // Feel free to add more if you need them
@@ -25,54 +26,49 @@ predicate WellFormedConstants(c:Constants) {
 // Feel free to add to this predicate, if necessary
 predicate WellFormed(c:Constants, v:Variables) {
     && WellFormedConstants(c)
-    && c.tableSize == |v.acquired|
+    && c.tableSize == |v.philosophers|
 }
 
 predicate Init(c:Constants, v:Variables) {
     && WellFormed(c, v)
-    && forall a | a in v.acquired :: !a
+    && forall a | a in v.philosophers :: a == Pair(false, false)
 }
 
-function LeftChopstickIndex(c: Constants, pi: nat): nat {
-    pi
+function LeftPhilosopher(c: Constants, pi: nat): nat
+  requires WellFormedConstants(c) {
+    if pi == 0 then c.tableSize - 1 else pi - 1
 }
 
-function RightChopstickIndex(c: Constants, pi: nat): nat {
+function RightPhilosopher(c: Constants, pi: nat) : nat 
+{
     if pi == c.tableSize - 1 then 0 else pi + 1
-}
-
-predicate AcquireSingle(c: Constants, v: Variables, v': Variables, pi: nat) {
-    && WellFormed(c, v)
-    && WellFormed(c, v')
-    && 0 <= pi < c.tableSize
-    && forall p | 0 <= p < c.tableSize && p != pi :: v.acquired[p] == v'.acquired[p]
-    && !v.acquired[pi]
-    && v'.acquired[pi]
 }
 
 // Philosopher with index pi acquires left chopstick
 predicate AcquireLeft(c:Constants, v:Variables, v':Variables, pi:nat) {
-    AcquireSingle(c, v, v', LeftChopstickIndex(c, pi))
+    && WellFormed(c, v)
+    && pi < c.tableSize
+    && !(v.philosophers[pi].left)
+    && !(v.philosophers[LeftPhilosopher(c, pi)].right)
+    && v' == v.(philosophers := v.philosophers[pi := v.philosophers[pi].(left := true)])
 }
 
 // Philosopher with index pi acquires right chopstick
 predicate AcquireRight(c:Constants, v:Variables, v':Variables, pi:nat) {
-    && AcquireSingle(c, v, v', RightChopstickIndex(c, pi))
+    && WellFormed(c, v)
+    && pi < c.tableSize
+    && !(v.philosophers[pi].right)
+    && !(v.philosophers[RightPhilosopher(c, pi)].left)
+    && v' == v.(philosophers := v.philosophers[pi := v.philosophers[pi].(right := true)])
 }
 
 // Philosopher with index pi releases both chopsticks
 predicate ReleaseBoth(c:Constants, v:Variables, v':Variables, pi:nat) {
-    var leftIdx := LeftChopstickIndex(c, pi);
-    var rightIdx := RightChopstickIndex(c, pi);
     && WellFormed(c, v)
-    && WellFormed(c, v')
-    && 0 <= pi < c.tableSize
-    && forall p | 0 <= p < c.tableSize && p != leftIdx && p != rightIdx ::
-         v.acquired[p] == v'.acquired[p]
-    && v.acquired[leftIdx]
-    && v.acquired[rightIdx]
-    && !v'.acquired[leftIdx]
-    && !v'.acquired[rightIdx]
+    && pi < c.tableSize
+    && v.philosophers[pi].left
+    && v.philosophers[pi].right
+    && v' == v.(philosophers := v.philosophers[pi := Pair(false, false)])
 }
 
 datatype Step =
@@ -90,4 +86,6 @@ predicate NextStep(c: Constants, v: Variables, v': Variables, step: Step) {
 predicate Next(c:Constants, v:Variables, v':Variables) {
     exists step :: NextStep(c, v, v', step)
 }
+
+
 
