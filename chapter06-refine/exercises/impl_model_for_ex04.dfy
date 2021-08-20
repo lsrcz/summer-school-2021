@@ -30,6 +30,13 @@
 // to build on for this exercise.
 
 /*
+ * Your goal is to model a 2-Phase Commit protocol. You're modeling a single
+ * instance of the problem -- a designated coordinator, no concurrent
+ * instances. Furthermore, you may assume there are no coordinator or
+ * participant failures. This is indeed a fairly simplistic setting, but it's
+ * still nontrivial, and is a nice example for reasoning about the
+ * state-machine composition framework.
+ *
  * 2-Phase Commit Protocol english design doc:
  *
  * 1, Coordinator sends VOTE-REQ to all participants.
