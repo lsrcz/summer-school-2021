@@ -23,11 +23,11 @@ simultaneously.
 
 datatype ServerState = Unlocked | LockedBy(client: nat)
 datatype ClientState = Client(acquired: bool)
-datatype Constants = Constants(numOfClient: nat)
-datatype Variables = Variables(serverState: ServerState, clientState: seq<ClientState>)
-
-predicate WellFormed(c: Constants, v: Variables) {
-  && c.numOfClient == |v.clientState|
+datatype Constants = Constants(numOfClient: nat) {
+  predicate WF() { true }
+}
+datatype Variables = Variables(serverState: ServerState, clientState: seq<ClientState>) {
+  predicate WF(c: Constants) { true }
 }
 
 predicate Unlocked(c: Constants, v: Variables) {
@@ -44,19 +44,19 @@ predicate AcquiredBy(c: Constants, v: Variables, client: nat) {
 }
 
 predicate Init(c:Constants, v:Variables) {
-  && WellFormed(c, v)
+  && v.WF(c)
   && Unlocked(c, v)
 }
 
 predicate Lock(c: Constants, v: Variables, v': Variables, client: nat) {
-  && WellFormed(c, v)
+  && v.WF(c)
   && Unlocked(c, v)
   && |v.clientState| == |v'.clientState|
   && AcquiredBy(c, v', client)
 }
 
 predicate Release(c: Constants, v: Variables, v': Variables, client: nat) {
-  && WellFormed(c, v)
+  && v.WF(c)
   && AcquiredBy(c, v, client)
   && |v.clientState| == |v'.clientState|
   && Unlocked(c, v')
@@ -79,7 +79,7 @@ predicate Next(c:Constants, v:Variables, v':Variables) {
 predicate Safety(c:Constants, v:Variables) {
   // What's a good definition of safety for the lock server? No two clients
   // have the lock simultaneously. Write that here.
-  WellFormed(c, v) && forall c1, c2 | 0 <= c1 < c.numOfClient && 0 <= c2 < c.numOfClient ::
+  v.WF(c) && forall c1, c2 | 0 <= c1 < |v.clientState| && 0 <= c2 < |v.clientState| ::
     (v.clientState[c1].acquired && v.clientState[c2].acquired) ==> c1 == c2
 }
 
@@ -92,18 +92,5 @@ lemma SafetyProof()
   ensures forall c, v, v' | Inv(c, v) && Next(c, v, v') :: Inv(c, v')
   ensures forall c, v | Inv(c, v) :: Safety(c, v)
 {
-  /*
-  forall c, v, v' | Inv(c, v) && Next(c, v, v') ensures Inv(c, v') {
-    InductiveStep(c, v, v');
-  }
-  */
-}
 
-/*
-lemma InductiveStep(c: Constants, v: Variables, v': Variables)
-  requires Inv(c, v)
-  requires Next(c, v, v')
-  ensures Inv(c, v')
-{
 }
-*/

@@ -5,10 +5,6 @@
 // impossible to prove. In fact, you can reuse parts of the instructor-supplied
 // proof from here as well.
 //
-//#extratopsecrethackmarkforelision "elide-types.dfy"
-
-// TODO(manos): how should we ensure this file is disseminated at the
-// appropriate time, so students aren't waiting for it?
 
 // This file is an "official solution" to exercises 01 & 02, to ensure you're
 // not doing battle with mistakes in your own protocol definition.  The proof
