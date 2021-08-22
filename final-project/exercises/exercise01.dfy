@@ -1,5 +1,10 @@
-// You will design a Sharded Hash Table (SHT) protocol and prove its correctness.
-//
+//#title Final Project
+//#desc Design a Sharded Hash Table (SHT) protocol and prove it is correct.
+
+// XXX TODO right now we don't give students ANYTHING about the trusted framework.
+// That feels like too little -- we're not trying to teach people to construct new
+// trusted frameworks, since the same basic framework can be reused in many settings.
+
 // The SHT should consist of a number of nodes storing key-value pairs.
 // There are no external clients; the nodes perform Get()'s and Put()'s on the keys directly.
 // A node can only perform a Get or Put on a key it owns.
@@ -63,3 +68,4 @@ module Base {
   }
 
 }
+

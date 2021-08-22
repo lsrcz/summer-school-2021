@@ -1,16 +1,19 @@
-//Your goal is to build a distributed lock server. This challenge differs from
-//LockServer in two ways. First, there is no central server that coordinates
-//the activity. Second, the hosts can communicate only via asynchronous
-//messages; a single state machine transition cannot simultaneously read or
-//update the state of two hosts.
+//#title Midterm Project
+//#desc Build a distributed lock server. Define your protocol in protocol.i;
+//#desc write your safety spec and proof here.
+
+// This challenge differs from LockServer in two ways. First, there is no
+// central server that coordinates the activity. Second, the hosts can
+// communicate only via asynchronous messages; a single state machine
+// transition cannot simultaneously read or update the state of two hosts.
 //
-//To guard against duplicate messages, the nodes associate a monotonically
-//increasing epoch number with the lock. Initially, node 0 holds the lock and
-//its epoch number is 1. A node that holds the lock can “grant” it to another
-//node by sending them a “Grant” message which has an epoch number that is
-//greater than the node’v epoch number. A node that receives such a message
-//will become the new holder and will set its epoch number to the message’v
-//epoch number.
+// To guard against duplicate messages, the nodes associate a monotonically
+// increasing epoch number with the lock. Initially, node 0 holds the lock and
+// its epoch number is 1. A node that holds the lock can “grant” it to another
+// node by sending them a “Grant” message which has an epoch number that is
+// greater than the node's epoch number. A node that receives such a message
+// will become the new holder and will set its epoch number to the message’v
+// epoch number.
 
 // You'll first need to modify 'protocol.i.dfy' to define the protocol message
 // format and the host behavior.
@@ -19,20 +22,33 @@
 
 include "distributed_system.s.dfy"
 
-// Replace 'false' with an appropriate safety condition: no two clients hold
-// the lock simulatneously.
-predicate Safety(v:DistVars) {
-  false
+module SafetySpec {
+  import opened HostIdentifiers
+  import DistributedSystem
+
+  // No two hosts think they hold the lock simulatneously.
+  predicate Safety(c:DistributedSystem.Constants, v:DistributedSystem.Variables) {
+    false // Replace this placeholder with an appropriate safety condition: no two clients hold
+  }
 }
 
-// Replace 'true' with an invariant that's induction and supports Safety.
-predicate Inv(v:DistVars) {
-  true
-}
+module Proof {
+  import opened HostIdentifiers
+  import Host
+  import opened DistributedSystem
+  import opened SafetySpec
 
-lemma SafetyProof()
-  ensures forall v :: DistInit(v) ==> Inv(v)
-  ensures forall v, v' :: Inv(v) && DistNext(v, v') ==> Inv(v')
-  ensures forall v :: Inv(v) ==> Safety(v)
-{
+  // TODO XXX should we give some signatures below as hints?
+
+  predicate Inv(c: Constants, v:Variables) {
+    true // Replace this placeholder with an invariant that's inductive and supports Safety.
+  }
+
+  lemma SafetyProof(c: Constants, v:Variables, v':Variables)
+    ensures Init(c, v) ==> Inv(c, v)
+    ensures Inv(c, v) && Next(c, v, v') ==> Inv(c, v')
+    ensures Inv(c, v) ==> Safety(c, v)
+  {
+    // Develop any necessary proof here.
+  }
 }
