@@ -31,7 +31,7 @@ predicate WellFormed(c:Constants, v:Variables) {
 
 predicate Init(c:Constants, v:Variables) {
     && WellFormed(c, v)
-    && forall a | a in v.philosophers :: a == Pair(false, false)
+    && forall i | 0 <= i < c.tableSize :: v.philosophers[i] == Pair(false, false)
 }
 
 function LeftPhilosopher(c: Constants, pi: nat): nat
@@ -87,5 +87,16 @@ predicate Next(c:Constants, v:Variables, v':Variables) {
     exists step :: NextStep(c, v, v', step)
 }
 
+predicate ForkConsistency(c: Constants, v: Variables) {
+    && WellFormed(c, v)
+    && (forall i | 0 <= i < c.tableSize :: !(
+        && v.philosophers[i].right
+        && v.philosophers[RightPhilosopher(c, i)].left
+    ))
+}
 
+lemma ForkConsistencyLemma()
+    ensures forall c, v | Init(c, v) :: ForkConsistency(c, v)
+    ensures forall c, v, v' | ForkConsistency(c, v) && Next(c, v, v') :: ForkConsistency(c, v') {
 
+    }

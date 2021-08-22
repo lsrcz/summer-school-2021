@@ -96,7 +96,12 @@ predicate Safety(c:Constants, v:Variables) {
 }
 
 predicate Inv(c:Constants, v:Variables) {
-  true  // Replace me: probably not strong enough. :v)
+  if v.server.Unlocked?
+  then
+    forall i | 0 <= i < |v.clients| :: !v.clients[i].Acquired?
+  else
+    exists i | 0 <= i < |v.clients| ::
+      v.clients[i].Acquired? && (forall j | 0 <= j < |v.clients| && j != i :: !v.clients[j].Acquired?)
 }
 
 // Here's your obligation. Probably easiest to break this up into three
@@ -106,4 +111,39 @@ lemma SafetyTheorem(c:Constants, v:Variables, v':Variables)
   ensures Inv(c, v) && Next(c, v, v') ==> Inv(c, v')
   ensures Inv(c, v) ==> Safety(c, v)
 {
+  if Init(c, v) {
+    InitImpliesInv(c, v);
+  }
+  if Inv(c, v) && Next(c, v, v') {
+    NextPreservesInv(c, v, v');
+  }
+  if Inv(c, v) {
+    InvImpliesSafety(c, v);
+  }
 }
+
+lemma InitImpliesInv(c: Constants, v: Variables)
+  requires Init(c, v)
+  ensures Inv(c, v) {}
+
+lemma NextPreservesInv(c: Constants, v: Variables, v': Variables)
+  requires Inv(c, v)
+  requires Next(c, v, v')
+  ensures Inv(c, v')
+{
+  var step :| NextStep(c, v, v', step);
+  match step
+    case AcquireStep(id) => {
+      assert v'.clients[id].Acquired?;
+    }
+    case ReleaseStep(id) => {
+    }
+}
+
+
+lemma InvImpliesSafety(c: Constants, v: Variables)
+  requires Inv(c, v)
+  ensures Safety(c, v)
+{
+}
+

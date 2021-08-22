@@ -35,7 +35,7 @@ module Crawler {
   }
 
   predicate Inv(v:Variables) {
-    true  // probably not strong enough. :v)
+    v.x + v.y >= 5
   }
 
   // Here's your obligation. Probably easiest to break this up into three

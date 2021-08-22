@@ -30,35 +30,25 @@ datatype Variables = Variables(serverState: ServerState, clientState: seq<Client
   predicate WF(c: Constants) { true }
 }
 
-predicate Unlocked(c: Constants, v: Variables) {
-  && v.serverState.Unlocked?
-  && forall client | 0 <= client < |v.clientState| :: !v.clientState[client].acquired
-}
-
-predicate AcquiredBy(c: Constants, v: Variables, client: nat) {
-  && 0 <= client < |v.clientState|
-  && v.serverState.LockedBy?
-  && v.serverState.client == client
-  && forall client1 | 0 <= client1 < |v.clientState| && client != client1 :: !v.clientState[client1].acquired
-  && v.clientState[client].acquired
-}
-
 predicate Init(c:Constants, v:Variables) {
   && v.WF(c)
-  && Unlocked(c, v)
+  && v.serverState.Unlocked?
+  && forall client | 0 <= client < |v.clientState| :: !v.clientState[client].acquired
 }
 
 predicate Lock(c: Constants, v: Variables, v': Variables, client: nat) {
   && v.WF(c)
   && 0 <= client < |v.clientState|
-  && Unlocked(c, v)
+  && v.serverState.Unlocked?
   && v'.serverState == LockedBy(client)
   && v'.clientState == v.clientState[client := Client(true)]
 }
 
 predicate Release(c: Constants, v: Variables, v': Variables, client: nat) {
   && v.WF(c)
-  && AcquiredBy(c, v, client)
+  && 0 <= client < |v.clientState|
+  && v.serverState.LockedBy?
+  && v.serverState.client == client
   && v'.serverState.Unlocked?
   && v'.clientState == v.clientState[client := Client(false)]
 }
@@ -80,18 +70,10 @@ predicate Next(c:Constants, v:Variables, v':Variables) {
 predicate Safety(c:Constants, v:Variables) {
   // What's a good definition of safety for the lock server? No two clients
   // have the lock simultaneously. Write that here.
-  v.WF(c) && forall c1, c2 | 0 <= c1 < |v.clientState| && 0 <= c2 < |v.clientState| ::
-    (v.clientState[c1].acquired && v.clientState[c2].acquired) ==> c1 == c2
+  v.WF(c) && forall c1, c2 | 0 <= c1 < |v.clientState| && 0 <= c2 < |v.clientState| &&
+    v.clientState[c1].acquired && v.clientState[c2].acquired :: c1 == c2
 }
 
 predicate Inv(c: Constants, v: Variables) {
   Safety(c, v)
-}
-
-lemma SafetyProof()
-  ensures forall c, v | Init(c, v) :: Inv(c, v)
-  ensures forall c, v, v' | Inv(c, v) && Next(c, v, v') :: Inv(c, v')
-  ensures forall c, v | Inv(c, v) :: Safety(c, v)
-{
-
 }
